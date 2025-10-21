@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+      - EVIDENTLY_WORKSPACE_PATH=./evidently_workspace
+    depends_on:
+      - mlflow
+    volumes:
+      - ./data:/app/data
+      - ./models:/app/models
+      - ./evidently_workspace:/app/evidently_workspace
+
+  mlflow:
+    image: python:3.11-slim
+    ports:
+      - "5000:5000"
+    command: >
+      sh -c "pip install mlflow && 
+             mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts --host 0.0.0.0 --port 5000"
+    volumes:
+      - ./mlruns:/mlruns
+      - ./mlartifacts:/mlartifacts
+
+  evidently:
+    image: python:3.11-slim
+    ports:
+      - "7000:7000"
+    command: >
+      sh -c "pip install evidently && 
+             evidently ui --host 0.0.0.0 --port 7000"
+    volumes:
+      - ./evidently_workspace:/evidently_workspace
