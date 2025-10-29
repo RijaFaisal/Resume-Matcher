@@ -10,7 +10,7 @@ app = FastAPI(
     version="1.0.0"
 )
 
-# Add Prometheus instrumentation
+
 instrumentator = get_instrumentator()
 instrumentator.instrument(app).expose(app)
 

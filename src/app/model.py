@@ -33,10 +33,9 @@ class ResumeScreener:
         return pd.DataFrame(cos_sim_matrix)
 
 
-# --- CRITICAL: Update this URI to point to the "normal" pre-trained model ---
 production_model_uri = "models:/resume-screener-sbert-pretrained/Production"
 
-# This instance is created only ONCE when the application starts.
+
 model = ResumeScreener(model_uri=production_model_uri)
 
 def get_model():
