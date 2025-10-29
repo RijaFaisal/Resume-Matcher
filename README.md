@@ -166,6 +166,38 @@ pyenv local 3.11.0
 
 See [CONTRIBUTION.md](CONTRIBUTION.md) for team member details and task assignments.
 
+## ☁️ Cloud Integration (D9)
+
+We integrated our project with **AWS Cloud** as part of the MLOps workflow.
+
+### Services Used
+1. **Amazon EC2** — hosts our FastAPI-based inference service.
+2. **Amazon S3** — used for storing and retrieving resumes.
+
+### EC2 Instance Details
+- Instance type: t3.micro (Free Tier)
+- Region: Europe (Stockholm) eu-north-1
+- Public IP: 13.51.56.78
+- Instance ID: i-0e206c363852fd33b
+
+### S3 Bucket Details
+- Bucket name: resume-matcher-bucket-sahil
+- Region: Europe (Stockholm) eu-north-1
+- Uploaded sample resume files (3 dummy resumes).
+
+### Screenshots
+| Description | Screenshot |
+|--------------|-------------|
+| EC2 instance running | ![EC2 Running](cloud_integration/ec2_running.png) |
+| FastAPI test response | ![API Response](cloud_integration/fastapi_response.png) |
+| S3 bucket with uploaded files | ![S3 Bucket](cloud_integration/s3_bucket.png) |
+
+---
+
+> **Note:** These screenshots show successful EC2 + S3 integration with a dummy FastAPI app.  
+> Once the final Dockerized application is ready, the EC2 app will be updated and redeployed.
+
+
 ## 📄 License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
