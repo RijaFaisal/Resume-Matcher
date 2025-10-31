@@ -79,7 +79,14 @@ except Exception as e:
             scores = np.random.rand(n_jobs).astype(float)
             return pd.DataFrame([scores])
 
-    model = DummyModel()
+    USE_DUMMY = os.getenv("USE_DUMMY", "true").lower() == "true"
+
+    if USE_DUMMY:
+        model = DummyModel()
+        print("⚙️ Using DummyModel (MLflow disabled).")
+    else:
+        model = ResumeScreener(model_uri=production_model_uri)
+        print("✅ Loaded model from MLflow registry.")
     # still try to load job csv (if it exists) so the UI can show job titles/descriptions
     try:
         df_jobs = load_job_data("job_title_des.csv")
