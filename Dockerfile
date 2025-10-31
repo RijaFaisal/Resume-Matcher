@@ -1,34 +1,39 @@
-# Multi-stage build for Resume Matcher
-FROM python:3.11-slim as base
 
-# Install system dependencies
-RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
+FROM python:3.11-slim AS builder
+
+# Install system dependencies (you may need poppler-utils for PDF or docx support)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    git \
     && rm -rf /var/lib/apt/lists/*
 
-# Set working directory
 WORKDIR /app
 
-# Copy requirements and install Python dependencies
+# Copy and install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy source code
-COPY src/ ./src/
-COPY tests/ ./tests/
+# Copy your source code
+COPY . .
 
-# Create non-root user
-RUN useradd --create-home --shell /bin/bash appuser
-RUN chown -R appuser:appuser /app
-USER appuser
+# ------------------------
+# Stage 2: Runtime
+# ------------------------
+FROM python:3.11-slim
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+# Create a non-root user
+RUN useradd -m app
+USER app
+WORKDIR /app
 
-# Expose port
-EXPOSE 8000
+# Copy everything from builder
+COPY --from=builder /app /app
 
-# Run the application
-CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Streamlit runs on port 8501 by default
+EXPOSE 8501
+
+# Healthcheck to ensure Streamlit server is up
+#HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health || exit 1
+
+# Command to start your app
+CMD ["streamlit", "run", "ui.py", "--server.port=8501", "--server.address=0.0.0.0"]
