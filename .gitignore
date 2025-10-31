@@ -139,7 +139,6 @@ evidently_workspace/
 # Data directories
 data/raw/
 data/processed/
-*.csv
 *.json
 *.parquet
 
