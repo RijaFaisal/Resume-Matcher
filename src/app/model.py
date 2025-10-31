@@ -2,6 +2,7 @@ import pandas as pd
 import torch
 from sentence_transformers import util
 import mlflow
+import numpy as np
 
 class ResumeScreener:
     """
@@ -26,6 +27,8 @@ class ResumeScreener:
         resume_embeddings = self.model.predict(resume_df)
         job_embeddings = self.model.predict(job_df)
 
+        # ensure resume_embeddings is an ndarray of floats
+        resume_embeddings = np.asarray(resume_embeddings, dtype=np.float32)
         resume_tensors = torch.from_numpy(resume_embeddings)
         job_tensors = torch.from_numpy(job_embeddings)
 
