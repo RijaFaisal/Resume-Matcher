@@ -57,9 +57,38 @@ except FileNotFoundError:
     st.error("Error: Make sure `job_title_des.csv` is in the root directory.")
     st.stop()
 except Exception as e:
-    st.error(f"Could not load the model from the MLflow Registry. Is the MLflow server running? Have you promoted the model to 'Production'?")
-    st.info(f"Details: {e}")
-    st.stop()
+    # If loading the real model fails (MLflow not available / model not registered),
+    # create a safe DummyModel so the UI still runs for development/demo.
+    st.warning("Could not load the production model from MLflow. Using a local dummy model for now.")
+    st.info(f"MLflow/model error: {e}")
+
+    import numpy as np
+
+    class DummyModel:
+        """
+        Emulates the real model's predict interface:
+        model.predict([resume_text], job_descriptions_list) -> DataFrame with shape (n_resumes, n_jobs)
+        """
+        def predict(self, resumes, job_descriptions):
+            # return random scores for each job for each resume
+            # For a single resume, this returns a DataFrame with one row and len(job_descriptions) columns
+            n_jobs = len(job_descriptions) if job_descriptions is not None else 0
+            if n_jobs == 0:
+                # safe fallback in case job list missing
+                return pd.DataFrame([[0.0]])
+            scores = np.random.rand(n_jobs).astype(float)
+            return pd.DataFrame([scores])
+
+    model = DummyModel()
+    # still try to load job csv (if it exists) so the UI can show job titles/descriptions
+    try:
+        df_jobs = load_job_data("job_title_des.csv")
+        job_descriptions_list = df_jobs["Job Description"].tolist()
+        job_titles = df_jobs["Job Title"].tolist()
+    except FileNotFoundError:
+        st.error("Error: Make sure `job_title_des.csv` is in the root directory.")
+        st.stop()
+
 
 
 st.subheader("Provide Your Resume")
