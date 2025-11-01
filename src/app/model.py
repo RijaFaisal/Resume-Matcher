@@ -58,12 +58,12 @@ class ResumeScreener:
 
         return None
 
-   def predict(self, resumes: list[str], job_descriptions: list[str]) -> pd.DataFrame:
-    """
-    Accepts:
+    def predict(self, resumes: list[str], job_descriptions: list[str]) -> pd.DataFrame:
+        """
+        Accepts:
       - resumes: list of resume text strings (e.g. [resume_text])
       - job_descriptions: list of job description strings
-    Returns:
+        Returns:
       - pandas.DataFrame with shape (n_resumes, n_jobs) of similarity scores.
     """
     # defensive defaults
