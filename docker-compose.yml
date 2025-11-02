@@ -1,22 +1,42 @@
 version: '3.8'
 
 services:
-  app:
-    build: .
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Dockerfile   # your sahil Dockerfile (Streamlit)
+    container_name: resume_frontend
     ports:
       - "8501:8501"
     environment:
+      - BACKEND_URL=http://backend:8000
       - MLFLOW_TRACKING_URI=http://mlflow:5000
       - EVIDENTLY_WORKSPACE_PATH=./evidently_workspace
     depends_on:
+      - backend
       - mlflow
     volumes:
       - ./data:/app/data
       - ./models:/app/models
       - ./evidently_workspace:/app/evidently_workspace
 
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend   # new backend Dockerfile (see below)
+    container_name: resume_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+
   mlflow:
     image: python:3.11-slim
+    container_name: resume_mlflow
     ports:
       - "5000:5000"
     command: >
@@ -28,6 +48,7 @@ services:
 
   evidently:
     image: python:3.11-slim
+    container_name: resume_evidently
     ports:
       - "7000:7000"
     command: >
