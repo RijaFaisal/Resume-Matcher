@@ -198,3 +198,4 @@ site/
 !CONTRIBUTION.md
 !CODE_OF_CONDUCT.md
 notebooks/sbert_model_from_S3
+monitoring/evidently/reports
