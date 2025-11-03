@@ -1,0 +1,146 @@
+version: '3.8'
+
+# Docker Compose for the MLOps Resume Matching App
+# Defines the services for the API, experiment tracking, and monitoring.
+
+services:
+  # Streamlit UI for Resume Matching
+  ui:
+    build:
+      context: ./src/ui
+      dockerfile: Dockerfile
+    container_name: resume_matcher_ui
+    ports:
+      - "8501:8501"
+    environment:
+      - API_URL=http://resume_matcher_api:8000/match_resume
+    volumes:
+      - ./data:/app/data
+    networks:
+      - mlops_network
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  # MLflow Tracking Server: Logs experiments, models, and artifacts.
+  mlflow:
+    image: ghcr.io/mlflow/mlflow:latest
+    container_name: mlflow_server
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./mlruns:/mlflow/mlruns
+      - ./mlflow-artifacts:/mlflow/artifacts
+    command: >
+      mlflow server
+      --backend-store-uri sqlite:///mlflow/mlruns/mlflow.db
+      --default-artifact-root /mlflow/artifacts
+      --host 0.0.0.0
+      --port 5000
+    networks:
+      - mlops_network
+    restart: unless-stopped
+
+  # Prometheus: Collects time-series metrics from the API and other exporters.
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+    networks:
+      - mlops_network
+    restart: unless-stopped
+
+  # Grafana: Visualizes metrics collected by Prometheus in dashboards.
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+      - ./monitoring/grafana/dashboards:/etc/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    networks:
+      - mlops_network
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+
+  # Node Exporter: Provides system-level metrics (CPU, Memory, Disk) for Prometheus.
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: node_exporter
+    ports:
+      - "9100:9100"
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    networks:
+      - mlops_network
+    restart: unless-stopped
+
+    # FastAPI Application for Resume Matching
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume_matcher_api
+    ports:
+      - "8000:8000"
+    environment:
+      # Pass AWS credentials and MLflow URI from .env file to the container
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - mlops_network
+    restart: unless-stopped
+    depends_on:
+      - mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Evidently AI Monitoring UI
+  evidently:
+    build:
+      context: ./monitoring/evidently
+      dockerfile: Dockerfile
+    container_name: evidently_ui
+    ports:
+      - "7000:7000"
+    volumes:
+      - ./monitoring/evidently/workspace:/app/workspace
+      - ./monitoring/evidently/reports:/app/reports
+    networks:
+      - mlops_network
+    restart: unless-stopped
+
+# Shared network for all services to communicate with each other
+networks:
+  mlops_network: # <-- Renamed for generic MLOps context
+    driver: bridge
+
+# Named volumes for persistent data storage
+volumes:
+  prometheus-data:
+  grafana-data:

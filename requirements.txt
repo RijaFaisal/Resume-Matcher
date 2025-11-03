@@ -1,0 +1,49 @@
+# ==================== Core ML Libraries ====================
+scikit-learn
+numpy
+pandas
+joblib
+
+# ==================== MLflow & Experiment Tracking ====================
+mlflow
+
+# ==================== Monitoring & Observability ====================
+evidently==0.4.33  # Stable for current workspace/UI usage
+prometheus-client==0.19.0
+
+# ==================== API & Web Framework ====================
+fastapi==0.104.1
+uvicorn[standard]==0.24.0
+pydantic
+
+# ==================== AWS & Cloud ====================
+boto3==1.34.10
+python-dotenv==1.0.0
+
+# ==================== Data Visualization ====================
+matplotlib==3.8.2
+seaborn==0.13.0
+plotly==5.18.0
+shap==0.44.0
+
+# ==================== Testing ====================
+pytest
+pytest-cov
+pytest-asyncio
+httpx
+
+# ==================== Code Quality ====================
+ruff
+black
+pre-commit
+
+# ==================== Security ====================
+pip-audit
+
+# ==================== Utilities ====================
+requests>=2.32.0  # Updated for evidently compatibility
+datasets
+transformers[torch]
+torch
+transformers
+sentence-transformers
