@@ -32,7 +32,7 @@ jobs:
           docker push ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-backend:${{ github.sha }}
 
       - name: Build frontend
-        run: docker build -t resume-frontend:${{ github.sha }} -f ui/Dockerfile ui
+        run: docker build -t resume-frontend:${{ github.sha }} -f src/ui/Dockerfile ui
 
       - name: Tag & push frontend
         run: |
