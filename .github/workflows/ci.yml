@@ -31,11 +31,28 @@ jobs:
           docker tag resume-backend:${{ github.sha }} ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-backend:${{ github.sha }}
           docker push ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-backend:${{ github.sha }}
 
+      - name: List repo files (debug)
+        run: |
+          echo "PWD: $(pwd)"
+          ls -la
+          echo "Listing src folder:"
+          ls -la src || true
+          echo "Listing src/ui folder:"
+          ls -la src/ui || true
+
       - name: Build frontend
-        run: docker build -t resume-frontend:${{ github.sha }} -f src/ui/Dockerfile ui
+        run: |
+          echo "Building frontend from src/ui"
+          if [ ! -d "./src/ui" ]; then
+            echo "ERROR: ./src/ui directory not found"
+            find . -maxdepth 3 -type d -print
+            exit 1
+          fi
+          docker build -t resume-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
 
       - name: Tag & push frontend
         run: |
           ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
           docker tag resume-frontend:${{ github.sha }} ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-frontend:${{ github.sha }}
           docker push ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-frontend:${{ github.sha }}
+
