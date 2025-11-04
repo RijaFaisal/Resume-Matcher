@@ -1,0 +1,41 @@
+name: Build & Push to ECR
+
+on:
+  push:
+    branches: [ temp ]
+  pull_request:
+    branches: [ temp ]
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build backend
+        run: docker build -t resume-backend:${{ github.sha }} -f Dockerfile .
+
+      - name: Tag & push backend
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          docker tag resume-backend:${{ github.sha }} ${ACCOUNT}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/resume-backend:${{ github.sha }}
+          docker push ${ACCOUNT}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/resume-backend:${{ github.sha }}
+
+      - name: Build frontend
+        run: docker build -t resume-frontend:${{ github.sha }} -f ui/Dockerfile ui
+
+      - name: Tag & push frontend
+        run: |
+          ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
+          docker tag resume-frontend:${{ github.sha }} ${ACCOUNT}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/resume-frontend:${{ github.sha }}
+          docker push ${ACCOUNT}.dkr.ecr.${{ secrets.AWS_REGION }}.amazonaws.com/resume-frontend:${{ github.sha }}
