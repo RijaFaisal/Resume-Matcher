@@ -45,7 +45,7 @@ def extract_text_from_file(uploaded_file):
 st.title("📄 Smart Resume Screener")
 
 try:
-    df_jobs = pd.read_csv("data/raw/job_title_des.csv")
+    df_jobs = pd.read_csv("notebooks/job_title_des.csv")
     # Create a dictionary mapping job titles to descriptions for easy lookup
     job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
     job_titles = df_jobs["Job Title"].tolist()
