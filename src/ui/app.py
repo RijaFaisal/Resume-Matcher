@@ -50,7 +50,7 @@ try:
     job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
     job_titles = df_jobs["Job Title"].tolist()
 except FileNotFoundError:
-    st.error("Error: Make sure `job_title_des.csv` is in the `data/raw` directory.")
+    st.error("Error: Make sure `job_title_des.csv` is in the `noetbooks` directory.")
     st.stop()
 
 st.subheader("Provide Your Resume")
