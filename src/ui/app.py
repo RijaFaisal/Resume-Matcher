@@ -9,16 +9,24 @@ import time
 # Get the API URL from the environment variable set in docker-compose.yml
 API_URL = os.getenv("API_URL", "http://16.16.197.220:8000")
 
-def analyze_resume_with_retry(payload, max_retries=40, delay=5):
+API_BASE = os.getenv("API_URL", "http://16.16.197.220:8000").rstrip("/")
+MATCH_ENDPOINT = f"{API_BASE}/match_resume"
+
+def analyze_resume_with_retry(payload, max_retries=40, delay=5, timeout=60):
     """Try to analyze resume with retries, returns (success, result, error_msg)"""
     for attempt in range(max_retries):
         try:
-            response = requests.post(API_URL, json=payload)
-            response.raise_for_status()
-            return True, response.json(), None
+            resp = requests.post(MATCH_ENDPOINT, json=payload, timeout=timeout)
+            # show backend validation errors to user
+            if resp.status_code == 422:
+                return False, None, f"Validation error: {resp.text}"
+            resp.raise_for_status()
+            return True, resp.json(), None
         except requests.exceptions.RequestException as e:
-            if attempt < max_retries - 1:  # Don't sleep on last attempt
-                time.sleep(delay)
+            # last attempt -> return readable message
+            if attempt >= max_retries - 1:
+                return False, None, f"Backend service is not responding ({e}). Please try again later."
+            time.sleep(delay)
             continue
     return False, None, "Backend service is not responding. Please try again in a few minutes."
 
