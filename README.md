@@ -115,21 +115,145 @@ make security
 pip-audit --desc
 ```
 
+## 📦 Data Version Control (DVC)
+
+We use DVC to track and version control our datasets and models.
+
+### Setup DVC
+```bash
+# Install DVC (already in requirements.txt)
+pip install dvc dvc-s3
+
+# Initialize DVC (already done)
+# dvc init
+
+# Configure remote storage (update with your S3 bucket)
+dvc remote add -d storage s3://your-bucket-name/dvc-storage
+```
+
+### Track Data Files
+```bash
+# Track a dataset
+dvc add data/resumes.csv
+
+# Track model files
+dvc add models/resume_model.pkl
+
+# Commit the .dvc files to git
+git add data/resumes.csv.dvc models/resume_model.pkl.dvc .gitignore
+git commit -m "Track datasets and models with DVC"
+```
+
+### Pull Data
+```bash
+# Pull data from remote storage
+dvc pull
+
+# Pull specific file
+dvc pull data/resumes.csv.dvc
+```
+
+### Push Data
+```bash
+# Push data to remote storage
+dvc push
+
+# Push specific file
+dvc push data/resumes.csv.dvc
+```
+
 ## 📚 API Documentation
 
 Once running, access the interactive API documentation:
 - **Swagger UI**: http://localhost:8000/docs
 - **ReDoc**: http://localhost:8000/redoc
+- **Prometheus Metrics**: http://localhost:8000/metrics
 
-### Example Usage
+### API Endpoints
 
+#### Health Check
 ```bash
-# Match a resume
-curl -X POST "http://localhost:8000/match" \
-  -H "Content-Type: multipart/form-data" \
-  -F "resume_file=@resume.pdf" \
-  -F "job_description=Looking for Python developer with ML experience" \
-  -F "threshold=0.7"
+curl -X GET "http://localhost:8000/health"
+```
+
+**Response:**
+```json
+{
+  "status": "ok"
+}
+```
+
+#### Predict Similarity
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resumes": [
+      "Software Engineer with 5 years of Python experience and ML expertise",
+      "Data Scientist with strong background in machine learning"
+    ],
+    "job_descriptions": [
+      "Looking for Python developer with ML experience",
+      "Need ML expert for data science role"
+    ]
+  }'
+```
+
+**Response:**
+```json
+{
+  "similarity_matrix": [
+    [0.85, 0.72],
+    [0.68, 0.91]
+  ]
+}
+```
+
+**JSON Schema:**
+```json
+{
+  "PredictionRequest": {
+    "resumes": ["string"],
+    "job_descriptions": ["string"]
+  },
+  "PredictionResponse": {
+    "similarity_matrix": [[float]]
+  }
+}
+```
+
+### cURL Examples
+
+**Single Resume vs Single Job:**
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resumes": ["Python developer with ML skills"],
+    "job_descriptions": ["Looking for Python ML engineer"]
+  }'
+```
+
+**Multiple Resumes vs Multiple Jobs:**
+```bash
+curl -X POST "http://localhost:8000/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resumes": [
+      "Python developer",
+      "Java developer",
+      "Full stack developer"
+    ],
+    "job_descriptions": [
+      "Need Python expert",
+      "Looking for Java specialist"
+    ]
+  }'
+```
+
+**Check Metrics:**
+```bash
+curl -X GET "http://localhost:8000/metrics"
 ```
 
 ## 🚨 FAQ

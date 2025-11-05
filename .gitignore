@@ -165,3 +165,9 @@ Thumbs.db
 
 # Monitoring
 monitoring/data/
+
+# DVC
+/dvc.lock
+*.dvc
+.dvc/tmp
+.dvc/cache

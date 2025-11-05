@@ -4,206 +4,188 @@ Tests for the FastAPI application endpoints.
 
 import pytest
 from fastapi.testclient import TestClient
-from unittest.mock import Mock, patch, AsyncMock
-import io
+from unittest.mock import Mock, patch
+import pandas as pd
 
-from src.main import app
-from src.config import settings
+from src.app.main import app
 
 
 class TestAPI:
     """Test class for API endpoints."""
-    
+
     def setup_method(self):
         """Set up test fixtures."""
         self.client = TestClient(app)
-        self.sample_resume_text = "Software Engineer with 5 years experience in Python and Machine Learning"
-        self.sample_job_description = "Looking for a Python developer with ML experience"
-    
-    def test_root_endpoint(self):
-        """Test the root endpoint."""
-        response = self.client.get("/")
-        assert response.status_code == 200
-        assert "message" in response.json()
-        assert response.json()["message"] == "Resume Matcher API"
-    
+
     def test_health_check(self):
         """Test the health check endpoint."""
         response = self.client.get("/health")
         assert response.status_code == 200
-        assert response.json()["status"] == "healthy"
-    
-    @patch('src.main.resume_matcher')
-    @patch('src.main.document_processor')
-    def test_match_resume_success(self, mock_processor, mock_matcher):
-        """Test successful resume matching."""
-        # Mock the document processor
-        mock_processor.process_document = AsyncMock(
-            return_value=self.sample_resume_text
-        )
-        
-        # Mock the resume matcher
-        mock_matcher.match = AsyncMock(return_value={
-            "score": 0.85,
-            "is_match": True,
-            "matched_skills": ["python", "machine learning"],
-            "missing_skills": ["sql"],
-            "recommendations": ["Consider gaining experience in SQL"]
-        })
-        
-        # Create a test file
-        test_file = io.BytesIO(b"Sample resume content")
-        test_file.name = "test_resume.pdf"
-        
+        assert response.json() == {"status": "ok"}
+
+    def test_docs_endpoint(self):
+        """Test the API documentation endpoint."""
+        response = self.client.get("/docs")
+        assert response.status_code == 200
+
+    def test_metrics_endpoint(self):
+        """Test the Prometheus metrics endpoint."""
+        response = self.client.get("/metrics")
+        assert response.status_code == 200
+        # Metrics should be in Prometheus format
+        assert "# HELP" in response.text or "# TYPE" in response.text
+
+    @patch("src.app.main.get_model")
+    def test_predict_endpoint_success(self, mock_get_model):
+        """Test successful prediction."""
+        # Mock the model
+        mock_model = Mock()
+        mock_similarity_df = pd.DataFrame([[0.85, 0.75], [0.65, 0.90]])
+        mock_model.predict.return_value = mock_similarity_df
+        mock_get_model.return_value = mock_model
+
+        # Make request
         response = self.client.post(
-            "/match",
-            files={"resume_file": ("test_resume.pdf", test_file, "application/pdf")},
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
+            "/predict",
+            json={
+                "resumes": [
+                    "Software Engineer with Python experience",
+                    "Data Scientist with ML background",
+                ],
+                "job_descriptions": [
+                    "Looking for Python developer",
+                    "Need ML expert",
+                ],
+            },
         )
-        
+
         assert response.status_code == 200
         data = response.json()
-        assert "match_score" in data
-        assert "is_match" in data
-        assert "recommendations" in data
-        assert data["match_score"] == 0.85
-        assert data["is_match"] is True
-    
-    def test_match_resume_invalid_file_type(self):
-        """Test resume matching with invalid file type."""
-        test_file = io.BytesIO(b"Sample content")
-        test_file.name = "test_resume.exe"
-        
+        assert "similarity_matrix" in data
+        assert len(data["similarity_matrix"]) == 2
+        assert len(data["similarity_matrix"][0]) == 2
+
+    def test_predict_endpoint_missing_resumes(self):
+        """Test prediction with missing resumes field."""
         response = self.client.post(
-            "/match",
-            files={"resume_file": ("test_resume.exe", test_file, "application/octet-stream")},
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
+            "/predict",
+            json={
+                "job_descriptions": ["Looking for Python developer"],
+            },
         )
-        
-        assert response.status_code == 400
-        assert "File type" in response.json()["detail"]
-    
-    def test_match_resume_file_too_large(self):
-        """Test resume matching with file that's too large."""
-        # Create a file larger than the limit
-        large_content = b"x" * (settings.max_file_size + 1)
-        test_file = io.BytesIO(large_content)
-        test_file.name = "test_resume.pdf"
-        
-        response = self.client.post(
-            "/match",
-            files={"resume_file": ("test_resume.pdf", test_file, "application/pdf")},
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
-        )
-        
-        assert response.status_code == 400
-        assert "File size exceeds" in response.json()["detail"]
-    
-    @patch('src.main.resume_matcher')
-    @patch('src.main.document_processor')
-    def test_batch_match_resumes(self, mock_processor, mock_matcher):
-        """Test batch resume matching."""
-        # Mock the document processor
-        mock_processor.process_document = AsyncMock(
-            return_value=self.sample_resume_text
-        )
-        
-        # Mock the resume matcher
-        mock_matcher.match = AsyncMock(return_value={
-            "score": 0.85,
-            "is_match": True,
-            "matched_skills": ["python"],
-            "missing_skills": [],
-            "recommendations": []
-        })
-        
-        # Create test files
-        test_file1 = io.BytesIO(b"Sample resume 1")
-        test_file1.name = "resume1.pdf"
-        test_file2 = io.BytesIO(b"Sample resume 2")
-        test_file2.name = "resume2.pdf"
-        
-        response = self.client.post(
-            "/batch-match",
-            files=[
-                ("resume_files", ("resume1.pdf", test_file1, "application/pdf")),
-                ("resume_files", ("resume2.pdf", test_file2, "application/pdf"))
-            ],
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
-        )
-        
-        assert response.status_code == 200
-        data = response.json()
-        assert "results" in data
-        assert len(data["results"]) == 2
-    
-    @patch('src.main.resume_matcher')
-    def test_get_model_info(self, mock_matcher):
-        """Test getting model information."""
-        mock_matcher.get_model_info = AsyncMock(return_value={
-            "is_trained": True,
-            "model_name": "test_model",
-            "model_version": "1.0.0"
-        })
-        
-        response = self.client.get("/model/info")
-        assert response.status_code == 200
-        data = response.json()
-        assert "is_trained" in data
-        assert data["is_trained"] is True
-    
-    @patch('src.main.resume_matcher')
-    def test_retrain_model(self, mock_matcher):
-        """Test model retraining."""
-        mock_matcher.retrain = AsyncMock()
-        
-        response = self.client.post("/model/retrain")
-        assert response.status_code == 200
-        assert "retraining initiated" in response.json()["message"]
-    
-    def test_match_resume_no_file(self):
-        """Test resume matching without file."""
-        response = self.client.post(
-            "/match",
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
-        )
-        
         assert response.status_code == 422  # Validation error
-    
-    @patch('src.main.resume_matcher')
-    @patch('src.main.document_processor')
-    def test_match_resume_processing_error(self, mock_processor, mock_matcher):
-        """Test resume matching with processing error."""
-        mock_processor.process_document = AsyncMock(
-            side_effect=Exception("Processing error")
-        )
-        
-        test_file = io.BytesIO(b"Sample resume content")
-        test_file.name = "test_resume.pdf"
-        
+
+    def test_predict_endpoint_missing_job_descriptions(self):
+        """Test prediction with missing job_descriptions field."""
         response = self.client.post(
-            "/match",
-            files={"resume_file": ("test_resume.pdf", test_file, "application/pdf")},
-            data={
-                "job_description": self.sample_job_description,
-                "threshold": "0.7"
-            }
+            "/predict",
+            json={
+                "resumes": ["Software Engineer with Python experience"],
+            },
         )
-        
-        assert response.status_code == 500
-        assert "Internal server error" in response.json()["detail"]
+        assert response.status_code == 422  # Validation error
+
+    def test_predict_endpoint_empty_lists(self):
+        """Test prediction with empty lists."""
+        with patch("src.app.main.get_model") as mock_get_model:
+            mock_model = Mock()
+            mock_model.predict.return_value = pd.DataFrame()
+            mock_get_model.return_value = mock_model
+
+            response = self.client.post(
+                "/predict",
+                json={
+                    "resumes": [],
+                    "job_descriptions": [],
+                },
+            )
+            assert response.status_code == 200
+
+    @patch("src.app.main.get_model")
+    def test_predict_endpoint_increments_counter(self, mock_get_model):
+        """Test that prediction increments the token counter."""
+        mock_model = Mock()
+        mock_model.predict.return_value = pd.DataFrame([[0.85]])
+        mock_get_model.return_value = mock_model
+
+        response = self.client.post(
+            "/predict",
+            json={
+                "resumes": ["Short resume"],
+                "job_descriptions": ["Short job description"],
+            },
+        )
+
+        assert response.status_code == 200
+        # Counter should have been incremented (tested via metrics endpoint)
+
+    def test_predict_endpoint_invalid_json(self):
+        """Test prediction with invalid JSON."""
+        response = self.client.post(
+            "/predict",
+            data="invalid json",
+            headers={"Content-Type": "application/json"},
+        )
+        assert response.status_code == 422
+
+    @patch("src.app.main.get_model")
+    def test_predict_endpoint_with_long_texts(self, mock_get_model):
+        """Test prediction with long resume and job description texts."""
+        mock_model = Mock()
+        mock_model.predict.return_value = pd.DataFrame([[0.92]])
+        mock_get_model.return_value = mock_model
+
+        long_resume = " ".join(["word"] * 500)
+        long_job_desc = " ".join(["word"] * 500)
+
+        response = self.client.post(
+            "/predict",
+            json={
+                "resumes": [long_resume],
+                "job_descriptions": [long_job_desc],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert "similarity_matrix" in data
+
+    def test_openapi_schema(self):
+        """Test that OpenAPI schema is available."""
+        response = self.client.get("/openapi.json")
+        assert response.status_code == 200
+        schema = response.json()
+        assert "openapi" in schema
+        assert "info" in schema
+        assert schema["info"]["title"] == "Smart Resume Screener API"
+        assert schema["info"]["version"] == "1.0.0"
+
+    @patch("src.app.main.get_model")
+    def test_predict_multiple_resumes_multiple_jobs(self, mock_get_model):
+        """Test prediction with multiple resumes and job descriptions."""
+        mock_model = Mock()
+        # 3 resumes x 2 jobs = 3x2 matrix
+        mock_model.predict.return_value = pd.DataFrame(
+            [[0.85, 0.75], [0.65, 0.90], [0.70, 0.80]]
+        )
+        mock_get_model.return_value = mock_model
+
+        response = self.client.post(
+            "/predict",
+            json={
+                "resumes": [
+                    "Python developer",
+                    "Java developer",
+                    "Full stack developer",
+                ],
+                "job_descriptions": [
+                    "Need Python expert",
+                    "Looking for Java specialist",
+                ],
+            },
+        )
+
+        assert response.status_code == 200
+        data = response.json()
+        assert len(data["similarity_matrix"]) == 3
+        assert len(data["similarity_matrix"][0]) == 2

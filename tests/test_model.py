@@ -1,210 +1,200 @@
 """
-Tests for the ResumeMatcher model.
+Tests for the ResumeScreener model.
 """
 
 import pytest
-from unittest.mock import Mock, patch, AsyncMock
+from unittest.mock import Mock, patch, MagicMock
+import pandas as pd
+import torch
 import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
 
-from src.model import ResumeMatcher
+from src.app.model import ResumeScreener, get_model
 
 
-class TestResumeMatcher:
-    """Test class for ResumeMatcher model."""
-    
-    def setup_method(self):
-        """Set up test fixtures."""
-        self.matcher = ResumeMatcher()
-        self.sample_resume = "Software Engineer with Python and Machine Learning experience"
-        self.sample_job_desc = "Looking for Python developer with ML skills"
-    
-    def test_initialization(self):
-        """Test ResumeMatcher initialization."""
-        assert self.matcher.vectorizer is None
-        assert self.matcher.classifier is None
-        assert self.matcher.is_trained is False
-        assert self.matcher.model_path is not None
-    
-    @patch('src.model.pickle.load')
-    @patch('builtins.open')
-    @patch('pathlib.Path.exists')
-    def test_load_model_success(self, mock_exists, mock_open, mock_load):
-        """Test successful model loading."""
-        mock_exists.return_value = True
-        mock_load.return_value = {
-            'vectorizer': Mock(),
-            'classifier': Mock()
-        }
-        
-        # This would be an async test in practice
-        # For now, we'll test the logic
-        assert True  # Placeholder for async test
-    
-    @patch('pathlib.Path.exists')
-    def test_load_model_not_found(self, mock_exists):
-        """Test model loading when no model exists."""
-        mock_exists.return_value = False
-        
-        # This would be an async test in practice
-        assert True  # Placeholder for async test
-    
-    def test_simple_similarity_match(self):
-        """Test simple similarity matching."""
-        # This would test the fallback similarity method
-        # For now, we'll test the logic structure
-        assert True  # Placeholder for actual test
-    
-    def test_extract_skills(self):
-        """Test skill extraction method."""
-        matched_skills, missing_skills = self.matcher._extract_skills(
-            "Python developer with machine learning experience",
-            "Looking for Python and SQL skills"
+class TestResumeScreener:
+    """Test class for ResumeScreener model."""
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_initialization(self, mock_load_model):
+        """Test ResumeScreener initialization."""
+        mock_model = Mock()
+        mock_load_model.return_value = mock_model
+
+        model_uri = "models:/test-model/Production"
+        screener = ResumeScreener(model_uri=model_uri)
+
+        assert screener.model == mock_model
+        mock_load_model.assert_called_once_with(model_uri)
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_returns_dataframe(self, mock_load_model):
+        """Test that predict returns a pandas DataFrame."""
+        # Mock model predictions
+        mock_model = Mock()
+        mock_model.predict.side_effect = [
+            np.array([[0.1, 0.2, 0.3]]),  # Resume embeddings
+            np.array([[0.4, 0.5, 0.6]]),  # Job description embeddings
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["Software Engineer with Python"],
+            job_descriptions=["Looking for Python developer"],
         )
-        
-        assert "python" in matched_skills
-        assert "sql" in missing_skills
-    
-    def test_generate_recommendations(self):
-        """Test recommendation generation."""
-        missing_skills = ["sql", "docker"]
-        matched_skills = ["python", "machine learning"]
-        
-        recommendations = self.matcher._generate_recommendations(
-            missing_skills, matched_skills
+
+        assert isinstance(result, pd.DataFrame)
+        assert result.shape == (1, 1)
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_multiple_resumes_and_jobs(self, mock_load_model):
+        """Test prediction with multiple resumes and job descriptions."""
+        mock_model = Mock()
+        # 2 resumes, 3-dim embeddings
+        mock_model.predict.side_effect = [
+            np.array([[0.1, 0.2, 0.3], [0.4, 0.5, 0.6]]),  # 2 resumes
+            np.array([[0.7, 0.8, 0.9], [0.2, 0.3, 0.4]]),  # 2 jobs
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["Resume 1", "Resume 2"],
+            job_descriptions=["Job 1", "Job 2"],
         )
-        
-        assert len(recommendations) > 0
-        assert any("sql" in rec.lower() for rec in recommendations)
-        assert any("python" in rec.lower() for rec in recommendations)
-    
-    def test_generate_recommendations_no_skills(self):
-        """Test recommendation generation with no skills."""
-        recommendations = self.matcher._generate_recommendations([], [])
-        
-        assert len(recommendations) > 0
-        assert "specific skills" in recommendations[0].lower()
-    
-    @patch('src.model.mlflow.start_run')
-    @patch('src.model.train_test_split')
-    def test_train_model(self, mock_split, mock_mlflow):
-        """Test model training."""
-        # Mock the train_test_split
-        mock_split.return_value = (
-            Mock(), Mock(), [1, 0, 1], [0, 1, 0]
+
+        assert isinstance(result, pd.DataFrame)
+        assert result.shape == (2, 2)  # 2 resumes x 2 jobs
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_creates_proper_dataframes(self, mock_load_model):
+        """Test that predict creates proper DataFrames for model input."""
+        mock_model = Mock()
+        mock_model.predict.side_effect = [
+            np.array([[0.1, 0.2]]),
+            np.array([[0.3, 0.4]]),
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        screener.predict(
+            resumes=["Test resume"],
+            job_descriptions=["Test job"],
         )
-        
-        # Mock MLflow
-        mock_run = Mock()
-        mock_mlflow.return_value.__enter__.return_value = mock_run
-        
-        # This would be an async test in practice
-        assert True  # Placeholder for async test
-    
-    def test_get_model_info(self):
-        """Test getting model information."""
-        # This would be an async test in practice
-        info = {
-            "is_trained": self.matcher.is_trained,
-            "model_name": "test_model",
-            "model_version": "1.0.0"
-        }
-        
-        assert "is_trained" in info
-        assert "model_name" in info
-        assert "model_version" in info
-    
-    def test_save_model_not_trained(self):
-        """Test saving model when not trained."""
-        # This would test the error case
-        assert True  # Placeholder for async test
-    
-    def test_match_with_trained_model(self):
-        """Test matching with trained model."""
-        # Mock trained model components
-        self.matcher.is_trained = True
-        self.matcher.vectorizer = Mock()
-        self.matcher.classifier = Mock()
-        
-        # Mock vectorizer transform
-        self.matcher.vectorizer.transform.return_value = Mock()
-        
-        # Mock classifier predict_proba
-        self.matcher.classifier.predict_proba.return_value = np.array([[0.3, 0.7]])
-        
-        # This would be an async test in practice
-        assert True  # Placeholder for async test
-    
-    def test_match_without_trained_model(self):
-        """Test matching without trained model."""
-        # This would test the fallback to simple similarity
-        assert True  # Placeholder for async test
-    
-    def test_extract_skills_comprehensive(self):
-        """Test comprehensive skill extraction."""
-        resume_text = """
-        Software Engineer with 5 years of experience in:
-        - Python programming
-        - Machine Learning with scikit-learn
-        - Data analysis with pandas
-        - Web development with Django
-        - Database design with PostgreSQL
-        """
-        
-        job_description = """
-        We are looking for a developer with:
-        - Python and JavaScript experience
-        - Machine Learning knowledge
-        - SQL and database skills
-        - Docker containerization
-        - AWS cloud services
-        """
-        
-        matched_skills, missing_skills = self.matcher._extract_skills(
-            resume_text, job_description
+
+        # Check that model.predict was called twice (once for resumes, once for jobs)
+        assert mock_model.predict.call_count == 2
+
+        # Check the structure of the input DataFrames
+        first_call_df = mock_model.predict.call_args_list[0][0][0]
+        second_call_df = mock_model.predict.call_args_list[1][0][0]
+
+        assert isinstance(first_call_df, pd.DataFrame)
+        assert isinstance(second_call_df, pd.DataFrame)
+        assert "text" in first_call_df.columns
+        assert "text" in second_call_df.columns
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_similarity_values_in_range(self, mock_load_model):
+        """Test that cosine similarity values are in valid range [-1, 1]."""
+        mock_model = Mock()
+        # Normalized embeddings for realistic cosine similarity
+        mock_model.predict.side_effect = [
+            np.array([[1.0, 0.0, 0.0]]),
+            np.array([[0.0, 1.0, 0.0]]),
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["Resume"],
+            job_descriptions=["Job"],
         )
-        
-        # Should match on common skills
-        assert len(matched_skills) > 0
-        assert len(missing_skills) > 0
-    
-    def test_generate_recommendations_various_scenarios(self):
-        """Test recommendation generation in various scenarios."""
-        # Scenario 1: Has matched skills, missing some
-        rec1 = self.matcher._generate_recommendations(
-            ["sql", "docker"], ["python", "ml"]
+
+        # Cosine similarity should be in range [-1, 1]
+        assert result.values.min() >= -1.0
+        assert result.values.max() <= 1.0
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_empty_strings(self, mock_load_model):
+        """Test prediction with empty strings."""
+        mock_model = Mock()
+        mock_model.predict.side_effect = [
+            np.array([[0.0, 0.0, 0.0]]),
+            np.array([[0.0, 0.0, 0.0]]),
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=[""],
+            job_descriptions=[""],
         )
-        assert len(rec1) == 2
-        
-        # Scenario 2: Only matched skills
-        rec2 = self.matcher._generate_recommendations(
-            [], ["python", "ml", "sql"]
+
+        assert isinstance(result, pd.DataFrame)
+        assert result.shape == (1, 1)
+
+    def test_get_model_returns_singleton(self):
+        """Test that get_model returns the same model instance."""
+        model1 = get_model()
+        model2 = get_model()
+        assert model1 is model2
+
+    def test_get_model_returns_resume_screener(self):
+        """Test that get_model returns a ResumeScreener instance."""
+        model = get_model()
+        assert isinstance(model, ResumeScreener)
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_with_special_characters(self, mock_load_model):
+        """Test prediction with special characters in text."""
+        mock_model = Mock()
+        mock_model.predict.side_effect = [
+            np.array([[0.1, 0.2, 0.3]]),
+            np.array([[0.4, 0.5, 0.6]]),
+        ]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["C++ developer with @skills #coding!"],
+            job_descriptions=["Need C++, Python & Java expert"],
         )
-        assert len(rec2) == 1
-        
-        # Scenario 3: Only missing skills
-        rec3 = self.matcher._generate_recommendations(
-            ["sql", "docker", "docker"], []
+
+        assert isinstance(result, pd.DataFrame)
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_converts_to_tensors_correctly(self, mock_load_model):
+        """Test that embeddings are converted to tensors correctly."""
+        mock_model = Mock()
+        embeddings = np.array([[0.5, 0.5, 0.5]])
+        mock_model.predict.side_effect = [embeddings, embeddings]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["Test"],
+            job_descriptions=["Test"],
         )
-        assert len(rec3) == 1
-    
-    @patch('src.model.pickle.dump')
-    @patch('builtins.open')
-    def test_save_model_success(self, mock_open, mock_dump):
-        """Test successful model saving."""
-        # Set up trained model
-        self.matcher.is_trained = True
-        self.matcher.vectorizer = Mock()
-        self.matcher.classifier = Mock()
-        
-        # This would be an async test in practice
-        assert True  # Placeholder for async test
-    
-    def test_model_initialization_with_settings(self):
-        """Test model initialization with custom settings."""
-        # Test that model path is set correctly
-        assert self.matcher.model_path is not None
-        assert hasattr(self.matcher, 'is_trained')
-        assert hasattr(self.matcher, 'vectorizer')
-        assert hasattr(self.matcher, 'classifier')
+
+        # Should complete without tensor conversion errors
+        assert isinstance(result, pd.DataFrame)
+        assert not result.empty
+
+    @patch("src.app.model.mlflow.pyfunc.load_model")
+    def test_predict_high_similarity_same_text(self, mock_load_model):
+        """Test that identical texts have high similarity."""
+        mock_model = Mock()
+        # Same embedding for both
+        same_embedding = np.array([[0.577, 0.577, 0.577]])  # Normalized
+        mock_model.predict.side_effect = [same_embedding, same_embedding]
+        mock_load_model.return_value = mock_model
+
+        screener = ResumeScreener(model_uri="models:/test/Production")
+        result = screener.predict(
+            resumes=["Python developer"],
+            job_descriptions=["Python developer"],
+        )
+
+        # Same text should have similarity close to 1
+        assert result.values[0][0] > 0.9
