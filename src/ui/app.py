@@ -7,7 +7,7 @@ import os
 import time
 
 # Get the API URL from the environment variable set in docker-compose.yml
-API_URL = os.getenv("API_URL", "http://resume_matcher_api:8000/match_resume")
+API_URL = os.getenv("API_URL", "http://16.16.197.220:8000")
 
 def analyze_resume_with_retry(payload, max_retries=40, delay=5):
     """Try to analyze resume with retries, returns (success, result, error_msg)"""
