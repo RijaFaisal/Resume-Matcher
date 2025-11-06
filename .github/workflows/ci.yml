@@ -2,8 +2,9 @@ name: Build & Push to ECR
 
 on:
   push:
-    branches: [ temp-ci ]
-  workflow_dispatch:
+    branches: [ temp ]
+  pull_request:
+    branches: [ temp ]
 
 jobs:
   build-and-push:
