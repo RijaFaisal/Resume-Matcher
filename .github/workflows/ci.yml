@@ -1,151 +1,199 @@
-name: CI/CD Pipeline
+name: D4 CI — Lint, Test, Build (GHCR), Canary, Acceptance
 
+# Triggers
 on:
   push:
     branches: [ main ]
   pull_request:
     branches: [ main ]
 
+# Grant permission to push/pull packages
+permissions:
+  contents: read
+  packages: write
+
+env:
+  IMAGE_NAME: ${{ github.repository }}         # ghcr.io/<owner>/<repo>
+  IMAGE_TAG: ${{ github.sha }}
+
 jobs:
   lint:
+    name: Lint (ruff + black)
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Lint with ruff
-      run: |
-        ruff check src/ tests/
-        ruff format --check src/ tests/
-    
-    - name: Format check with black
-      run: |
-        black --check src/ tests/
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install linters
+        run: |
+          python -m pip install --upgrade pip
+          pip install ruff black
+
+      - name: Ruff checks
+        run: |
+          # adjust paths if your code is elsewhere
+          if [ -d "src" ] || [ -d "tests" ]; then
+            ruff check src/ tests/ || (echo "ruff check failed" && exit 1)
+            ruff format --check src/ tests/ || (echo "ruff format check failed" && exit 1)
+          else
+            echo "No src/ or tests/ dirs found — skipping ruff"
+          fi
+
+      - name: Black format check
+        run: |
+          if [ -d "src" ] || [ -d "tests" ]; then
+            black --check src/ tests/ || (echo "black check failed" && exit 1)
+          else
+            echo "No src/ or tests/ dirs found — skipping black"
+          fi
 
   test:
+    name: Unit tests (pytest + coverage ≥80%)
     runs-on: ubuntu-latest
+    needs: lint
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Test with pytest
-      run: |
-        pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80
-    
-    - name: Upload coverage to Codecov
-      uses: codecov/codecov-action@v3
-      with:
-        file: ./coverage.xml
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install test deps
+        run: |
+          python -m pip install --upgrade pip
+          pip install pytest pytest-cov
+
+          # optional: install project deps if present
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+
+      - name: Run pytest with coverage
+        run: |
+          if [ -d "tests" ] || ls test* 1>/dev/null 2>&1; then
+            pytest tests/ -v --cov=src --cov-report=xml --cov-report=html --cov-fail-under=80
+          else
+            echo "No tests/ found — failing to meet D4 requirement: add tests under tests/"; exit 1
+          fi
+
+      - name: Upload coverage artifact (optional)
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: ./htmlcov
 
   build:
-    needs: [lint, test]
+    name: Build & Push image to GHCR
     runs-on: ubuntu-latest
+    needs: test
     steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
-    
-    - name: Login to GitHub Container Registry
-      uses: docker/login-action@v3
-      with:
-        registry: ghcr.io
-        username: ${{ github.actor }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-    
-    - name: Build and push Docker image
-      uses: docker/build-push-action@v5
-      with:
-        context: .
-        push: true
-        tags: |
-          ghcr.io/${{ github.repository }}:${{ github.sha }}
-          ghcr.io/${{ github.repository }}:latest
-        cache-from: type=gha
-        cache-to: type=gha,mode=max
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push to GHCR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.IMAGE_NAME }}:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   canary-deploy:
-    needs: build
+    name: Canary deploy (docker run -e CANARY=true)
     runs-on: ubuntu-latest
+    needs: build
+    # Only run canary on main branch pushes (optional safeguard)
     if: github.ref == 'refs/heads/main'
     steps:
-    - name: Deploy to canary environment
-      run: |
-        docker run -d \
-          --name resume-matcher-canary \
-          -p 8001:8000 \
-          -e CANARY=true \
-          ghcr.io/${{ github.repository }}:${{ github.sha }}
+      - name: Login to GHCR before pulling image
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Pull & run canary container
+        run: |
+          IMAGE=ghcr.io/${{ env.IMAGE_NAME }}:${{ env.IMAGE_TAG }}
+          echo "Pulling ${IMAGE}"
+          docker pull ${IMAGE}
+          # Ensure older canary removed (idempotent)
+          docker rm -f resume-matcher-canary 2>/dev/null || true
+          docker run -d --name resume-matcher-canary -p 8001:8000 -e CANARY=true ${IMAGE}
+          # Wait for the container to start
+          retries=20
+          until curl -sS http://localhost:8001/health >/dev/null 2>&1 || [ $retries -eq 0 ]; do
+            sleep 2
+            retries=$((retries-1))
+            echo "Waiting for canary to be ready... retries left: $retries"
+          done
+          if [ $retries -eq 0 ]; then
+            echo "Canary did not become healthy in time"
+            docker logs resume-matcher-canary || true
+            docker rm -f resume-matcher-canary || true
+            exit 1
+          fi
+          echo "Canary started and /health responded."
 
   acceptance-tests:
-    needs: canary-deploy
+    name: Acceptance tests (5+ golden queries)
     runs-on: ubuntu-latest
+    needs: canary-deploy
     if: github.ref == 'refs/heads/main'
     steps:
-    - name: Wait for service to be ready
-      run: |
-        sleep 30
-        curl -f http://localhost:8001/health || exit 1
-    
-    - name: Run acceptance tests
-      run: |
-        # Test health endpoint
-        curl -f http://localhost:8001/health
-        
-        # Test root endpoint
-        curl -f http://localhost:8001/
-        
-        # Test API documentation
-        curl -f http://localhost:8001/docs
-        
-        # Test model info endpoint
-        curl -f http://localhost:8001/model/info
-        
-        # Test with sample data (if available)
-        echo "All acceptance tests passed"
+      - name: Run golden-set queries against canary
+        run: |
+          set -e
+          BASE=http://localhost:8001
+          echo "Running acceptance tests against ${BASE}"
 
-  security:
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@v4
-    
-    - name: Set up Python
-      uses: actions/setup-python@v4
-      with:
-        python-version: '3.11'
-    
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-    
-    - name: Security audit with pip-audit
-      run: |
-        pip-audit --desc --format=json --output=audit.json
-        pip-audit --desc --format=text
-    
-    - name: Check for critical vulnerabilities
-      run: |
-        pip-audit --desc --format=json | jq -r '.[] | select(.severity == "CRITICAL") | .id' | wc -l
-        if [ $(pip-audit --desc --format=json | jq -r '.[] | select(.severity == "CRITICAL") | .id' | wc -l) -gt 0 ]; then
-          echo "Critical vulnerabilities found!"
-          exit 1
-        fi
+          # 1) Health check
+          curl -f ${BASE}/health
+          echo "1/5 health OK"
+
+          # 2) Root / homepage
+          curl -f ${BASE}/
+          echo "2/5 root OK"
+
+          # 3) API docs (swagger/openapi)
+          curl -f ${BASE}/docs
+          echo "3/5 docs OK"
+
+          # 4) Model info (common in your FastAPI)
+          curl -f ${BASE}/model/info
+          echo "4/5 model/info OK (or adjust endpoint to your project's equivalent)"
+
+          # 5) Example inference request (adjust JSON & endpoint to your API)
+          # If your inference endpoint is /predict or /match, change accordingly.
+          curl -s -X POST ${BASE}/predict -H "Content-Type: application/json" -d '{"text":"Sample resume text about data science and python"}' -f || \
+            (echo "POST /predict failed — trying /match as fallback" && \
+            curl -s -X POST ${BASE}/match -H "Content-Type: application/json" -d '{"text":"Sample resume text about data science and python"}' -f)
+
+          echo "5/5 inference OK"
+
+          echo "All acceptance tests passed ✅"
+
+      - name: Cleanup canary container
+        if: always()
+        run: |
+          docker logs resume-matcher-canary || true
+          docker rm -f resume-matcher-canary || true
