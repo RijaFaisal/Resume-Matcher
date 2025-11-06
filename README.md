@@ -1,5 +1,7 @@
 ## ☁️ Cloud Deployment
 
+Screenshots added in the D9 cloud integration folder in root.
+
 ### Services Used
 - **Amazon EC2:** Hosts both backend (FastAPI API) and frontend (Streamlit UI) containers.
 - **Amazon ECR:** Stores Docker images for frontend and backend built by GitHub Actions.
