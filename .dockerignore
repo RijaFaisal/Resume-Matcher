@@ -1,0 +1,32 @@
+# Ignore virtual environments
+venv/
+.env/
+
+# Ignore Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Ignore local data and artifacts
+data/
+artifacts/
+mlruns/
+logs/
+*.log
+*.csv
+*.xlsx
+*.html
+
+# Ignore Git files
+.git/
+.gitignore
+
+
+
+# Ignore any models or large files
+*.pt
+*.pkl
+*.joblib
+*.zip
+*.tar
+*.gz
