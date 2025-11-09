@@ -1,0 +1,77 @@
+name: CI - Lint, Test, Build & Deploy (GHCR)
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  build-test-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1️⃣ Checkout code
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 2️⃣ Set up Python
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+
+      # 3️⃣ Install dependencies
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # 4️⃣ Lint check (Ruff + Black)
+      - name: Run Ruff lint
+        run: ruff check src tests
+
+      - name: Run Black check
+        run: black --check src tests
+
+      # 5️⃣ Run Pytest with coverage
+      - name: Run tests with coverage
+        run: pytest --cov=src --cov-fail-under=80
+
+      # 6️⃣ Log in to GHCR
+      - name: Login to GitHub Container Registry
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+
+      # 7️⃣ Build Docker images (modify paths if needed)
+      - name: Build backend Docker image
+        run: docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} -f Dockerfile .
+
+      - name: Build frontend Docker image
+        run: docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
+
+      # 8️⃣ Push images to GHCR
+      - name: Push Docker images to GHCR
+        run: |
+          docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
+
+      # 9️⃣ Canary deploy (run in GH Actions runner)
+      - name: Canary Deploy
+        run: |
+          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          sleep 10
+
+      # 🔟 Acceptance tests (hit canary endpoint)
+      - name: Acceptance Tests
+        run: |
+          echo "Running acceptance tests..."
+          urls=("http://localhost:8000/health" "http://localhost:8000/api/v1/ping" "http://localhost:8000/api/v1/users" "http://localhost:8000/api/v1/data" "http://localhost:8000/api/v1/test")
+          for url in "${urls[@]}"; do
+            echo "Testing $url"
+            status=$(curl -o /dev/null -s -w "%{http_code}" $url)
+            if [ "$status" -ne 200 ]; then
+              echo "❌ $url failed with status $status"
+              exit 1
+            fi
+          done
+          echo "✅ All endpoints healthy!"
