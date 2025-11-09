@@ -1,6 +1,5 @@
 name: CI - Lint, Test, Build & Deploy (GHCR)
 
-
 on:
   push:
     branches: [ temp ]
@@ -12,14 +11,39 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
+      # ✅ Clean space BEFORE anything else (CRITICAL)
+      - name: Free up disk space
+        run: |
+          echo "Before cleanup:"
+          df -h
+
+          # Remove heavy unused SDKs
+          sudo rm -rf /usr/share/dotnet || true
+          sudo rm -rf /opt/ghc || true
+          sudo rm -rf "/usr/local/share/boost" || true
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
+
+          docker system prune -af || true
+          docker builder prune -af || true
+          docker volume prune -f || true
+
+          sudo rm -rf /tmp/*
+          sudo rm -rf ~/.cache/pip/*
+
+          echo "After cleanup:"
+          df -h
+
+      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
+      # 3️⃣ Cache pip
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -28,62 +52,52 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
+      # 4️⃣ Install dependencies
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
 
+      # 5️⃣ Static checks
       - name: Run Ruff lint
         run: ruff check src tests || true
 
       - name: Run Black (non-blocking)
         run: black --check src tests || true
 
+      # 6️⃣ Unit tests + coverage
       - name: Run tests with coverage
         run: pytest --cov=src --cov-fail-under=70
 
-      # ✅ Debug and disk checks
-      - name: Show disk usage before Docker
-        run: |
-          df -h
-          du -sh /* 2>/dev/null
-
-      # ✅ Aggressive cleanup
-      - name: Aggressive Docker cleanup
-        run: |
-          docker system prune -af
-          docker builder prune -af
-          docker volume prune -f
-          rm -rf /tmp/*
-          rm -rf /home/runner/.cache/pip/*
-
-      # ✅ Show disk usage after cleanup
-      - name: Show disk usage after cleanup
-        run: df -h
-
+      # 7️⃣ Login to GHCR
       - name: Login to GHCR
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      # 8️⃣ Build & Push Backend
       - name: Build & Push Backend
         run: |
           docker build -t ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
           docker push ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
 
+      # 9️⃣ Build & Push Frontend
       - name: Build & Push Frontend
         run: |
           docker build -t ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
           docker push ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }}
 
+      # 🔟 Build & Push Evidently
       - name: Build & Push Evidently
         run: |
           docker build -t ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
           docker push ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }}
 
+      # 1️⃣1️⃣ Canary Deploy backend
       - name: Canary Deploy backend
         run: |
           docker run -d -e CANARY=true -p 8000:8000 ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
           sleep 10
 
+      # 1️⃣2️⃣ Acceptance Tests
       - name: Acceptance Tests
         run: |
           urls=("http://localhost:8000/health" "http://localhost:8000/api/v1/ping")
