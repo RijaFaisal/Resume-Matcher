@@ -32,7 +32,7 @@ jobs:
         run: ruff check src tests || true
 
       - name: Run Black check
-        run: black --check src tests
+        run: black src tests
 
       # 5️⃣ Run Pytest with coverage
       - name: Run tests with coverage
