@@ -11,39 +11,27 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout code
         uses: actions/checkout@v4
 
-      # ✅ Clean space BEFORE anything else (CRITICAL)
       - name: Free up disk space
         run: |
           echo "Before cleanup:"
           df -h
 
-          # Remove heavy unused SDKs
-          sudo rm -rf /usr/share/dotnet || true
-          sudo rm -rf /opt/ghc || true
-          sudo rm -rf "/usr/local/share/boost" || true
-          sudo rm -rf "$AGENT_TOOLSDIRECTORY" || true
-
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost "$AGENT_TOOLSDIRECTORY" || true
           docker system prune -af || true
           docker builder prune -af || true
           docker volume prune -f || true
 
-          sudo rm -rf /tmp/*
-          sudo rm -rf ~/.cache/pip/*
-
           echo "After cleanup:"
           df -h
 
-      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.10"
 
-      # 3️⃣ Cache pip
       - name: Cache pip
         uses: actions/cache@v3
         with:
@@ -52,65 +40,57 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      # 4️⃣ Install dependencies
       - name: Install test dependencies
         run: |
           python -m pip install --upgrade pip
           pip install --no-cache-dir -r requirements.txt
 
-      # 5️⃣ Static checks
       - name: Run Ruff lint
         run: ruff check src tests || true
 
       - name: Run Black (non-blocking)
         run: black --check src tests || true
 
-      # 6️⃣ Unit tests + coverage
       - name: Run tests with coverage
         run: pytest --cov=src --cov-fail-under=70
 
-      # 7️⃣ Login to GHCR (lowercase owner)
       - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.repository_owner,, }}" --password-stdin
+        run: |
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
+          echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "$IMAGE_OWNER" --password-stdin
 
-      # 8️⃣ Build & Push Backend
       - name: Build & Push Backend
         run: |
-          IMAGE_OWNER="${{ github.repository_owner,, }}"
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
           docker push ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }}
 
-      # 9️⃣ Build & Push Frontend
       - name: Build & Push Frontend
         run: |
-          IMAGE_OWNER="${{ github.repository_owner,, }}"
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
           docker push ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }}
 
-      # 🔟 Build & Push Evidently
       - name: Build & Push Evidently
         run: |
-          IMAGE_OWNER="${{ github.repository_owner,, }}"
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
           docker push ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }}
 
-      # 1️⃣1️⃣ Canary Deploy backend
       - name: Canary Deploy backend
         run: |
-          IMAGE_OWNER="${{ github.repository_owner,, }}"
+          IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
           docker run -d -e CANARY=true -p 8000:8000 ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }}
           sleep 10
 
-      # 1️⃣2️⃣ Acceptance Tests
       - name: Acceptance Tests
         run: |
           urls=("http://localhost:8000/health" "http://localhost:8000/api/v1/ping")
           for url in "${urls[@]}"; do
-            echo "Testing $url"
             status=$(curl -o /dev/null -s -w "%{http_code}" $url)
             if [ "$status" -ne 200 ]; then
-              echo "❌ $url failed with status $status"
+              echo "❌ $url failed ($status)"
               exit 1
             fi
-          end
-          echo "✅ All endpoints healthy!"
+          done
+          echo "✅ Canary deployment healthy!"
