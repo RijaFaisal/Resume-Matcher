@@ -2,7 +2,7 @@ name: Build & Push to ECR
 
 on:
   push:
-    branches: [ temp ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:

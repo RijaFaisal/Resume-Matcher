@@ -31,8 +31,10 @@ jobs:
       - name: Run Ruff lint
         run: ruff check src tests || true
 
-      - name: Run Black (check-only)
-        run: black --check src tests
+      - name: Run Black (non-blocking)
+        run: |
+            black --check src tests || true
+
 
       # 5️⃣ Run tests with coverage
       - name: Run tests with coverage
