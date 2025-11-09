@@ -69,32 +69,32 @@ jobs:
       - name: Run tests with coverage
         run: pytest --cov=src --cov-fail-under=70
 
-      # 7️⃣ Login to GHCR
+      # 7️⃣ Login to GHCR (✅ using repo owner)
       - name: Login to GHCR
-        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
+        run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.repository_owner }} --password-stdin
 
       # 8️⃣ Build & Push Backend
       - name: Build & Push Backend
         run: |
-          docker build -t ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
-          docker push ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
+          docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
 
       # 9️⃣ Build & Push Frontend
       - name: Build & Push Frontend
         run: |
-          docker build -t ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
-          docker push ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }}
+          docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }}
 
       # 🔟 Build & Push Evidently
       - name: Build & Push Evidently
         run: |
-          docker build -t ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
-          docker push ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }}
+          docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }}
 
       # 1️⃣1️⃣ Canary Deploy backend
       - name: Canary Deploy backend
         run: |
-          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
+          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
           sleep 10
 
       # 1️⃣2️⃣ Acceptance Tests
