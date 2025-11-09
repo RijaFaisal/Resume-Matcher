@@ -2,11 +2,7 @@ name: CI - Lint, Test, Build & Deploy (GHCR)
 
 on:
   push:
-<<<<<<< HEAD
-    branches: [ main ]
-=======
     branches: [ temp ]
->>>>>>> c43dd26 (Add GHCR CI workflow)
   pull_request:
   workflow_dispatch:
 
