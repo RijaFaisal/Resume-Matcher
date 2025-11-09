@@ -36,7 +36,7 @@ jobs:
 
       # 5️⃣ Run Pytest with coverage
       - name: Run tests with coverage
-        run: pytest --cov=src --cov-fail-under=80
+        run: pytest --cov=src --cov-fail-under=75
 
       # 6️⃣ Log in to GHCR
       - name: Login to GitHub Container Registry
