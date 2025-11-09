@@ -6,45 +6,34 @@ import docx
 import os
 import time
 
-# Get the API URL from the environment variable set in docker-compose.yml
-API_URL = os.getenv("API_URL", "http://16.16.197.220:8000")
-
-API_BASE = os.getenv("API_URL", "http://16.16.197.220:8000").rstrip("/")
+API_BASE = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 MATCH_ENDPOINT = f"{API_BASE}/match_resume"
 
-def analyze_resume_with_retry(payload, max_retries=40, delay=5, timeout=60):
-    """Try to analyze resume with retries, returns (success, result, error_msg)"""
+def analyze_resume_with_retry(payload, max_retries=5, delay=2, timeout=30):
     for attempt in range(max_retries):
         try:
             resp = requests.post(MATCH_ENDPOINT, json=payload, timeout=timeout)
-            # show backend validation errors to user
             if resp.status_code == 422:
                 return False, None, f"Validation error: {resp.text}"
             resp.raise_for_status()
             return True, resp.json(), None
         except requests.exceptions.RequestException as e:
-            # last attempt -> return readable message
             if attempt >= max_retries - 1:
-                return False, None, f"Backend service is not responding ({e}). Please try again later."
+                return False, None, f"Backend not responding ({e})"
             time.sleep(delay)
-            continue
-    return False, None, "Backend service is not responding. Please try again in a few minutes."
+    return False, None, "Backend service not responding"
 
-st.set_page_config(
-    page_title="Smart Resume Screener UI",
-    page_icon="📄",
-    layout="wide"
-)
+st.set_page_config(page_title="Smart Resume Screener UI", page_icon="📄", layout="wide")
 
 def extract_text_from_file(uploaded_file):
     try:
-        if uploaded_file.name.endswith('.pdf'):
+        if uploaded_file.name.endswith(".pdf"):
             doc = fitz.open(stream=uploaded_file.getvalue(), filetype="pdf")
             return "".join(page.get_text() for page in doc)
-        elif uploaded_file.name.endswith('.docx'):
+        elif uploaded_file.name.endswith(".docx"):
             doc = docx.Document(uploaded_file)
-            return '\n'.join([para.text for para in doc.paragraphs])
-        elif uploaded_file.name.endswith('.txt'):
+            return "\n".join([p.text for p in doc.paragraphs])
+        elif uploaded_file.name.endswith(".txt"):
             return uploaded_file.getvalue().decode("utf-8")
     except Exception as e:
         st.error(f"Error reading file: {e}")
@@ -54,16 +43,15 @@ st.title("📄 Smart Resume Screener")
 
 try:
     df_jobs = pd.read_csv("notebooks/job_title_des.csv")
-    # Create a dictionary mapping job titles to descriptions for easy lookup
     job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
     job_titles = df_jobs["Job Title"].tolist()
 except FileNotFoundError:
-    st.error("Error: Make sure `job_title_des.csv` is in the `noetbooks` directory.")
+    st.error("job_title_des.csv not found in notebooks/")
     st.stop()
 
 st.subheader("Provide Your Resume")
-uploaded_file = st.file_uploader("Upload your resume file", type=["txt", "pdf", "docx"])
-resume_text_area = st.text_area("Or paste your resume content here:", height=200)
+uploaded_file = st.file_uploader("Upload resume", type=["txt", "pdf", "docx"])
+resume_text_area = st.text_area("Or paste resume content here:", height=200)
 
 resume_text = ""
 if uploaded_file:
@@ -72,67 +60,44 @@ else:
     resume_text = resume_text_area
 
 st.subheader("Matching Results")
-top_n = st.number_input("Number of top matches to display:", min_value=1, max_value=20, value=5)
+top_n = st.number_input("Top matches to display:", min_value=1, max_value=20, value=5)
 
-if st.button("Find Best Matching Jobs", type="primary"):
-    if not resume_text or not resume_text.strip():
-        st.warning("Please upload a file or paste resume content.")
+if st.button("Find Best Matching Jobs"):
+    if not resume_text.strip():
+        st.warning("Upload a file or paste content.")
     else:
-        # Create placeholder for status messages and results
         status_placeholder = st.empty()
         results_placeholder = st.empty()
-        
         with status_placeholder:
-            st.info("🔄 Backend service is starting up... This may take a minute or two while the ML model loads...")
-            
-        # Show a spinner while we're trying
-        with st.spinner("Running resume analysis..."):
-            payload = {
-                "resume_text": resume_text,
-                "top_n": top_n
-            }
-            
+            st.info("🔄 Starting backend analysis...")
+        with st.spinner("Analyzing..."):
+            payload = {"resume_text": resume_text, "top_n": top_n}
             success, result, error_msg = analyze_resume_with_retry(payload)
-            
             if success:
                 matches = result["matches"]
                 results_df = pd.DataFrame([{
-                    'Job Title': match['job_title'],
-                    'Rank': match['rank'],
-                    'Similarity Score': match['similarity_score']
-                } for match in matches])
-                
-                # Clear the status message
+                    "Job Title": m["job_title"],
+                    "Rank": m["rank"],
+                    "Similarity Score": m["similarity_score"]
+                } for m in matches])
                 status_placeholder.empty()
-                
                 with results_placeholder:
                     st.success("✅ Analysis complete!")
-                    
-                    # Create columns for better layout
                     col1, col2 = st.columns([2, 1])
-                    
                     with col1:
                         st.subheader("🎯 Top Matching Jobs")
-                        for index, row in results_df.iterrows():
+                        for _, row in results_df.iterrows():
                             with st.container():
                                 st.markdown("---")
-                                # Title and match score in the same line
                                 st.markdown(f"### #{row['Rank']} - {row['Job Title']}")
-                                col_a, col_b = st.columns([3, 1])
-                                with col_a:
+                                c1, c2 = st.columns([3,1])
+                                with c1:
                                     st.progress(row['Similarity Score'])
-                                with col_b:
+                                with c2:
                                     st.markdown(f"**Match:** `{row['Similarity Score']:.2%}`")
-                                
-                                # Expander with clear indication
-                                with st.expander("� View Complete Job Description"):
-                                    if row['Job Title'] in job_descriptions_dict:
-                                        st.markdown(job_descriptions_dict[row['Job Title']])
-                                    else:
-                                        st.warning("Job description not available")
+                                with st.expander("🔍 View Job Description"):
+                                    st.markdown(job_descriptions_dict.get(row['Job Title'], "Not available"))
             else:
-                # Update status message to show error
                 with status_placeholder:
                     st.error(f"❌ {error_msg}")
-                # Clear the results area if there was an error
                 results_placeholder.empty()
