@@ -32,9 +32,7 @@ jobs:
         run: ruff check src tests || true
 
       - name: Run Black (non-blocking)
-        run: |
-            black --check src tests || true
-
+        run: black --check src tests || true
 
       # 5️⃣ Run tests with coverage
       - name: Run tests with coverage
@@ -44,27 +42,27 @@ jobs:
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # 7️⃣ Build Docker images (FIXED: force lowercase repo name)
+      # 7️⃣ Build Docker images (lowercase owner & repo)
       - name: Build backend Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
+        run: docker build -t ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
 
       - name: Build frontend Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
+        run: docker build -t ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
 
       - name: Build Evidently Docker image
-        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
+        run: docker build -t ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
 
       # 8️⃣ Push images to GHCR
       - name: Push Docker images to GHCR
         run: |
-          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }}
+          docker push ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
+          docker push ghcr.io/rijafaisal/resume-matcher-frontend:${{ github.sha }}
+          docker push ghcr.io/rijafaisal/resume-matcher-evidently:${{ github.sha }}
 
       # 9️⃣ Canary deploy backend
       - name: Canary Deploy backend
         run: |
-          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
+          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/rijafaisal/resume-matcher-backend:${{ github.sha }}
           sleep 10
 
       # 🔟 Acceptance Tests
