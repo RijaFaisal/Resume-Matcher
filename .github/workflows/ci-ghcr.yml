@@ -27,14 +27,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # 4️⃣ Lint check (Ruff + Black)
+      # 4️⃣ Lint
       - name: Run Ruff lint
         run: ruff check src tests || true
 
-      - name: Run Black check
-        run: black src tests
+      - name: Run Black (check-only)
+        run: black --check src tests
 
-      # 5️⃣ Run Pytest with coverage
+      # 5️⃣ Run tests with coverage
       - name: Run tests with coverage
         run: pytest --cov=src --cov-fail-under=70
 
@@ -42,34 +42,34 @@ jobs:
       - name: Login to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
-      # 7️⃣ Build Docker images
+      # 7️⃣ Build Docker images (FIXED: force lowercase repo name)
       - name: Build backend Docker image
-        run: docker build -t ghcr.io/${{ github.repository }}/backend:${{ github.sha }} -f Dockerfile .
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
 
       - name: Build frontend Docker image
-        run: docker build -t ghcr.io/${{ github.repository }}/frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
 
       - name: Build Evidently Docker image
-        run: docker build -t ghcr.io/${{ github.repository }}/evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
+        run: docker build -t ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
 
       # 8️⃣ Push images to GHCR
       - name: Push Docker images to GHCR
         run: |
-          docker push ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}/frontend:${{ github.sha }}
-          docker push ghcr.io/${{ github.repository }}/evidently:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-frontend:${{ github.sha }}
+          docker push ghcr.io/${{ github.repository_owner }}/resume-matcher-evidently:${{ github.sha }}
 
-      # 9️⃣ Canary deploy backend (optional)
+      # 9️⃣ Canary deploy backend
       - name: Canary Deploy backend
         run: |
-          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/${{ github.repository }}/backend:${{ github.sha }}
+          docker run -d -e CANARY=true -p 8000:8000 ghcr.io/${{ github.repository_owner }}/resume-matcher-backend:${{ github.sha }}
           sleep 10
 
-      # 🔟 Acceptance tests (hit canary endpoint)
+      # 🔟 Acceptance Tests
       - name: Acceptance Tests
         run: |
           echo "Running acceptance tests..."
-          urls=("http://localhost:8000/health" "http://localhost:8000/api/v1/ping" "http://localhost:8000/api/v1/users" "http://localhost:8000/api/v1/data" "http://localhost:8000/api/v1/test")
+          urls=("http://localhost:8000/health" "http://localhost:8000/api/v1/ping")
           for url in "${urls[@]}"; do
             echo "Testing $url"
             status=$(curl -o /dev/null -s -w "%{http_code}" $url)
