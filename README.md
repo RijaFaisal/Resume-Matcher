@@ -100,7 +100,7 @@ Here's a preview of the key components of the MLOps Resume Matcher in action.
 | **Interactive UI (Streamlit)** | **Monitoring Dashboard (Grafana)** |
 | :---: | :---: |
 | *The user-facing interface for matching resumes.* | *Real-time monitoring of API and system performance.* |
-| ![Streamlit UI](./docs/screenshots/streamlit_ui.png) | ![Grafana Dashboard](./docs/screenshots/grafana_resume_dashboard.png) |
+| ![Streamlit UI](./docs/screenshots/ui.png) | ![Grafana Dashboard](./docs/screenshots/grafana_resume_dashboard.png) |
 | **Experiment Tracking (MLflow)** | **Data Drift Report (Evidently)** |
 | :---: | :---: |
 | *Tracking models, artifacts, and parameters.* | *Visualizing drift in the resume text data.* |
