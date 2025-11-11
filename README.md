@@ -44,6 +44,7 @@ Follow these steps to get the entire stack—from data setup to a live API and U
 -   Docker & Docker Compose
 -   Git
 -   AWS CLI (configured with your credentials)
+-   Jupyter Notebook or JupyterLab
 
 #### Step 1: Clone & Configure
 ```bash
@@ -63,15 +64,14 @@ This bucket will store your datasets, models, and MLflow artifacts.
 aws s3 mb s3://my-resume-data-store
 ```
 
-#### Step 3: Run One-Time Setup Tasks (inside Docker)
-These commands use `docker-compose` to run the initial data upload and model embedding generation scripts.
-```bash
-# 1. Upload raw data (Resume.csv, job_title_des.csv) to S3
-docker-compose run --rm api python src/scripts/01_data_upload_initial.py
+#### Step 3: Run One-Time Setup Tasks
+These tasks are performed by running Jupyter notebooks.
 
-# 2. Generate job embeddings and log model artifacts to MLflow & S3
-docker-compose run --rm api python src/scripts/03_model_train.py
-```
+1.  **Upload raw data (Resume.csv, job_title_des.csv) to S3**
+    -   Open and run the `notebooks/data_to_AWS.ipynb` notebook.
+
+2.  **Generate job embeddings and log model artifacts to MLflow & S3**
+    -   Open and run the `notebooks/model_train.ipynb` notebook.
 
 #### Step 4: Launch the Full MLOps Stack
 This command starts all services (UI, API, MLflow, Prometheus, Grafana, and Evidently) in the background.
@@ -97,19 +97,46 @@ All services are now running and accessible via `localhost`.
 
 Here's a preview of the key components of the MLOps Resume Matcher in action.
 
-| **Interactive UI (Streamlit)** | **Monitoring Dashboard (Grafana)** |
-| :---: | :---: |
-| *The user-facing interface for matching resumes.* | *Real-time monitoring of API and system performance.* |
-| ![Streamlit UI](./docs/screenshots/ui.png) | ![Grafana Dashboard](./docs/screenshots/grafana_resume_dashboard.png) |
-| **Experiment Tracking (MLflow)** | **Data Drift Report (Evidently)** |
-| :---: | :---: |
-| *Tracking models, artifacts, and parameters.* | *Visualizing drift in the resume text data.* |
-| ![MLflow Experiments](./docs/screenshots/mlflow_experiments.png) | ![Evidently Drift Report](./docs/screenshots/evidently_drift_report.png) |
+**Interactive UI (Streamlit)**
+*The user-facing interface for matching resumes.*
+![Streamlit UI](./docs/screenshots/ui.png)
+
+**Monitoring Dashboard (Grafana)**
+*Real-time monitoring of API and system performance.*
+![Grafana Dashboard](./docs/screenshots/grafana.png)
+
+**Experiment Tracking (MLflow)**
+*Tracking models, artifacts, and parameters.*
+![MLflow Experiments](./docs/screenshots/mlflow_experiments.png)
+
+**Data Drift Report (Evidently)**
+*Visualizing drift in the resume text data.*
+![Evidently Drift Report](./docs/screenshots/evidently_drift_report.png)
 
 ---
 
 ### 🛠️ Technology Stack
-*(A full list of technologies and their purposes is provided in previous sections)*
+
+This project leverages a modern, production-ready stack for building and managing machine learning systems.
+
+| Category | Technology | Purpose |
+| :--- | :--- | :--- |
+| **Backend** | **FastAPI** | High-performance Python framework for building the REST API. |
+| | **Uvicorn** | ASGI server for running the FastAPI application. |
+| **Frontend** | **Streamlit** | Python library for creating the interactive web UI. |
+| **ML/NLP** | **Sentence-Transformers** | Framework for generating state-of-the-art text embeddings (using a BERT-based model). |
+| | **PyTorch** | Core deep learning framework for handling tensors and models. |
+| | **Pandas** | Data manipulation and analysis. |
+| **MLOps & Monitoring**| **MLflow** | For experiment tracking, model logging, and artifact storage. |
+| | **Evidently AI** | For data and model quality monitoring, including drift detection. |
+| | **Prometheus** | Time-series database for collecting real-time metrics. |
+| | **Grafana** | For visualizing metrics and creating monitoring dashboards. |
+| | **Prometheus FastAPI Instrumentator** | To automatically instrument the FastAPI app for Prometheus. |
+| **CI/CD & Automation**| **GitHub Actions** | For orchestrating the CI/CD pipeline (lint, test, build, deploy). |
+| | **Docker & Docker Compose** | For containerizing all services and managing the local stack. |
+| | **Pre-commit** | For running automated checks (linting, secret scanning) before commits. |
+| **Cloud & Storage** | **AWS S3** | Object storage for datasets, models, and MLflow artifacts. |
+| | **AWS EC2** | Virtual servers for hosting the application in the cloud. |
 
 ---
 
@@ -137,7 +164,23 @@ This project is built with a focus on automation, code quality, and a robust CI/
 ---
 
 ### 📐 Architecture
-*(The architecture diagram is provided in previous sections)*
+
+The architecture is designed to be modular, scalable, and observable, following best practices for MLOps.
+
+1.  **Data & Model Storage (AWS S3)**: S3 acts as the single source of truth. It stores the raw CSV datasets, the trained **BERT-based Sentence-Transformer model**, the pre-computed job embeddings, and all MLflow experiment artifacts. This decouples data from the application logic.
+
+2.  **Backend API (FastAPI)**: A containerized FastAPI application serves the core matching logic. On startup, it loads the model and job embeddings from S3 into memory. It exposes a `POST /match_resume` endpoint that takes resume text, generates an embedding in real-time, and performs a cosine similarity search against the pre-computed job embeddings to find the best matches.
+
+3.  **Frontend UI (Streamlit)**: A separate containerized Streamlit application provides a user-friendly interface. It communicates with the FastAPI backend, sending user-provided resume text to the API and displaying the returned job matches in a clean, readable format.
+
+4.  **Monitoring Stack**:
+    -   **Prometheus**: Scrapes metrics from the FastAPI API (instrumented via `prometheus-fastapi-instrumentator`).
+    -   **Grafana**: Visualizes the metrics from Prometheus in a custom dashboard, providing insights into API latency, request rate, and system health.
+    -   **Evidently AI**: Runs in its own container and provides a UI for viewing data drift and model performance reports, which can be generated on-demand via notebooks.
+
+5.  **Experiment Tracking (MLflow)**: MLflow is used to log the model training (embedding generation) process. It records the model used, parameters, and the output `job_embeddings.pt` file, all stored in the S3 artifact store.
+
+6.  **CI/CD (GitHub Actions)**: The entire workflow is automated. On every push, GitHub Actions lints the code, runs tests, and builds Docker images. On merge to main, it can be configured to deploy the new images to a production environment (like AWS EC2).
 
 ---
 
@@ -187,7 +230,7 @@ curl -X POST "http://localhost:8000/match_resume" \
 
 ### ☁️ Cloud Deployment on AWS
 
-This application is designed for and deployed on Amazon Web Services (AWS), leveraging core services for compute and storage.
+This application is designed for and deployed on Amazon Web Services (AWS), leveraging core services for compute and storage. Screenshots added in the D9 cloud integration folder in root.
 
 #### **AWS Services Used**
 
@@ -198,51 +241,17 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 2.  **Amazon S3 (Simple Storage Service)**
     -   **Purpose**: Acts as the central, durable object store for all data and model artifacts, decoupling storage from compute.
     -   **Stores**: Raw data (`.csv`), model artifacts (SentenceTransformer files), generated embeddings (`.pt`), and MLflow experiment data.
+ 
+3.  **Amazon ECR:** 
+    -   **Purpose** Stores Docker images for frontend and backend built by GitHub Actions.
 
-## ☁️ Cloud Deployment
-
-Screenshots added in the D9 cloud integration folder in root.
-
-### Services Used
-- **Amazon EC2:** Hosts both backend (FastAPI API) and frontend (Streamlit UI) containers.
-- **Amazon ECR:** Stores Docker images for frontend and backend built by GitHub Actions.
-- **Amazon S3:** Stores raw dataset (`job_title_des.csv`) accessed by backend during inference.
-- **IAM Role:** `mlflow-s3-access-role` attached to EC2 grants secure S3 access.
-
-### Architecture Overview
-The workflow integrates AWS services as follows:
-
-1. **Model & Data Storage:** Training data (`job_title_des.csv`) resides in an S3 bucket.
-2. **Continuous Deployment:**  
-   - On each `git push`, GitHub Actions builds and pushes Docker images to Amazon ECR.  
-   - The EC2 instance then pulls these images and runs them via Docker.
-3. **Serving:**  
-   - Backend (FastAPI) runs on port 8000 and serves `/match_resume` API.  
-   - Frontend (Streamlit) runs on port 8501, sends resume text to backend API, and displays job matches.
-
-### How to Reproduce
-1. Launch an EC2 instance with Ubuntu or Amazon Linux 2023.  
-2. Install Docker and AWS CLI, then authenticate to ECR:  
-   ```bash
-   aws ecr get-login-password --region eu-north-1 | docker login --username AWS --password-stdin <ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com
-
-Pull and run images:
-
-docker pull <ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/resume-frontend:<tag>
-docker pull <ACCOUNT_ID>.dkr.ecr.eu-north-1.amazonaws.com/resume-backend:<tag>
-docker run -d -p 8000:8000 resume-backend
-docker run -d -p 8501:8501 resume-frontend
-
-Interaction Between Components
-
-The frontend sends resume text to http://<EC2_PUBLIC_IP>:8000/match_resume.
-The backend loads job descriptions from S3, computes similarity scores, and returns results.
-All logs and health checks are viewable via EC2 and Docker.
+4.  **IAM Role:** 
+    -   **Purpose** `mlflow-s3-access-role` attached to EC2 grants secure S3 access.
 
 #### **How the ML Workflow Interacts with AWS**
 
-1.  **Setup**: The initial `01_...` script sends raw datasets to the **S3 bucket**.
-2.  **Training (Embedding)**: The `03_...` script reads data from **S3**, generates embeddings, and logs the model and embeddings tensor back to **S3** via MLflow.
+1.  **Setup**: The `notebooks/data_to_AWS.ipynb` notebook sends raw datasets to the **S3 bucket**.
+2.  **Training (Embedding)**: The `notebooks/model_train.ipynb` notebook reads data from **S3**, generates embeddings, and logs the model and embeddings tensor back to **S3** via MLflow.
 3.  **Inference**: The FastAPI application on **EC2** loads the model and embeddings from **S3** into memory on startup for fast, real-time matching.
 
 #### **Production Endpoints**
@@ -296,10 +305,8 @@ A `Makefile` is included for easy access to common commands. Run `make help` for
 **Q: How do I update the application with new job descriptions?**
 -   **A:** This requires re-generating the embeddings for the new job list. Follow this workflow:
     1.  Update your local `job_title_des.csv` file.
-    2.  Run the data upload script again to push the new file to S3:
-        `docker-compose run --rm api python src/scripts/01_data_upload_initial.py`
-    3.  Re-run the embedding generation script. This creates a new `job_embeddings.pt` file:
-        `docker-compose run --rm api python src/scripts/03_model_train.py`
+    2.  Run the `notebooks/data_to_AWS.ipynb` notebook again to push the new file to S3.
+    3.  Re-run the `notebooks/model_train.ipynb` notebook. This creates a new `job_embeddings.pt` file.
     4.  Finally, restart your services to force the API to load the new embeddings:
         `make stop && make run`
 
