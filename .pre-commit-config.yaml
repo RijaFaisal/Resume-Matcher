@@ -36,4 +36,3 @@ repos:
  #   rev: 0.3.10
  #   hooks:
  #     - id: nbstripout                   # Strip notebook outputs
-
