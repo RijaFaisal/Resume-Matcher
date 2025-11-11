@@ -10,6 +10,9 @@
 
 An end-to-end MLOps pipeline that intelligently matches resumes to job descriptions using semantic search. This project is built with a production-grade stack, featuring an **interactive Streamlit UI**, a scalable FastAPI backend, real-time monitoring, CI/CD, and automated workflows.
 
+###Eperience the app live: 
+* Frontend: http://16.16.197.220:8501
+* Backend: http://16.16.197.220:8000/docs
 ---
 
 ### 📖 Table of Contents
@@ -254,16 +257,6 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 2.  **Training (Embedding)**: The `notebooks/model_train.ipynb` notebook reads data from **S3**, generates embeddings, and logs the model and embeddings tensor back to **S3** via MLflow.
 3.  **Inference**: The FastAPI application on **EC2** loads the model and embeddings from **S3** into memory on startup for fast, real-time matching.
 
-#### **Production Endpoints**
-
-| Service | URL | Status |
-| :--- | :--- | :--- |
-| **Interactive UI** | `https://54.123.45.67:8501` | ✅ Live |
-| **API Endpoint** | `https://54.123.45.67:8000` | ✅ Live |
-| **MLflow UI** | `http://54.123.45.67:5000` | ✅ Live |
-| **Grafana UI** | `http://54.123.45.67:3000` | ✅ Live |
-
-*(Note: The IP address `54.123.45.67` is a placeholder. Replace it with your actual EC2 instance's public IP.)*
 
 ---
 
