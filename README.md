@@ -110,11 +110,11 @@ Here's a preview of the key components of the MLOps Resume Matcher in action.
 
 **Experiment Tracking (MLflow)**
 *Tracking models, artifacts, and parameters.*
-![MLflow Experiments](./docs/screenshots/mlflow_experiments.png)
+![MLflow Experiments](./docs/screenshots/mlflow.png)
 
 **Data Drift Report (Evidently)**
 *Visualizing drift in the resume text data.*
-![Evidently Drift Report](./docs/screenshots/evidently_drift_report.png)
+![Evidently Drift Report](./docs/screenshots/evidently.png)
 
 ---
 
