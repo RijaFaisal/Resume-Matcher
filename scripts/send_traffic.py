@@ -1,4 +1,5 @@
 import time
+
 import requests
 
 
@@ -15,5 +16,3 @@ def main(num_requests: int = 30, delay_seconds: float = 0.2) -> None:
 
 if __name__ == "__main__":
     main()
-
-

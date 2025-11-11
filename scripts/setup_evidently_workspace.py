@@ -1,7 +1,8 @@
 import os
+
 import pandas as pd
-from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset, TextOverviewPreset
+from evidently.report import Report
 from evidently.ui.workspace import Workspace
 
 
@@ -35,5 +36,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-

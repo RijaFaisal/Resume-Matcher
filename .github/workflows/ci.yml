@@ -54,4 +54,3 @@ jobs:
           ACCOUNT=$(aws sts get-caller-identity --query Account --output text)
           docker tag resume-frontend:${{ github.sha }} ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-frontend:${{ github.sha }}
           docker push ${ACCOUNT}.dkr.ecr.eu-north-1.amazonaws.com/resume-frontend:${{ github.sha }}
-

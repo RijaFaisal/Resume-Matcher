@@ -1,5 +1,6 @@
-import requests
 import sys
+
+import requests
 
 
 def main(project_id: str) -> None:
@@ -9,8 +10,16 @@ def main(project_id: str) -> None:
         "dashboard": {
             "name": "Resume NLP Monitoring",
             "panels": [
-                {"title": "Text Overview", "filter": {"metadata_values": {}, "tag_values": []}, "size": 2},
-                {"title": "Data Drift", "filter": {"metadata_values": {}, "tag_values": []}, "size": 2},
+                {
+                    "title": "Text Overview",
+                    "filter": {"metadata_values": {}, "tag_values": []},
+                    "size": 2,
+                },
+                {
+                    "title": "Data Drift",
+                    "filter": {"metadata_values": {}, "tag_values": []},
+                    "size": 2,
+                },
             ],
         },
     }
@@ -25,5 +34,3 @@ if __name__ == "__main__":
         print("Usage: update_dashboard.py <project_id>")
         sys.exit(1)
     main(sys.argv[1])
-
-

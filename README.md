@@ -10,7 +10,7 @@
 
 An end-to-end MLOps pipeline that intelligently matches resumes to job descriptions using semantic search. This project is built with a production-grade stack, featuring an **interactive Streamlit UI**, a scalable FastAPI backend, real-time monitoring, CI/CD, and automated workflows.
 
-### Eperience the app live (hosted on AWS): 
+### Eperience the app live (hosted on AWS):
 * Frontend: http://16.16.197.220:8501
 * Backend: http://16.16.197.220:8000/docs
 ---
@@ -245,11 +245,11 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 2.  **Amazon S3 (Simple Storage Service)**
     -   **Purpose**: Acts as the central, durable object store for all data and model artifacts, decoupling storage from compute.
     -   **Stores**: Raw data (`.csv`), model artifacts (SentenceTransformer files), generated embeddings (`.pt`), and MLflow experiment data.
- 
-3.  **Amazon ECR:** 
+
+3.  **Amazon ECR:**
     -   **Purpose** Stores Docker images for frontend and backend built by GitHub Actions.
 
-4.  **IAM Role:** 
+4.  **IAM Role:**
     -   **Purpose** `mlflow-s3-access-role` attached to EC2 grants secure S3 access.
 
 #### **How the ML Workflow Interacts with AWS**
@@ -303,6 +303,3 @@ A `Makefile` is included for easy access to common commands. Run `make help` for
     3.  Re-run the `notebooks/model_train.ipynb` notebook. This creates a new `job_embeddings.pt` file.
     4.  Finally, restart your services to force the API to load the new embeddings:
         `make stop && make run`
-
-
-

@@ -1,13 +1,15 @@
-import streamlit as st
-import requests
-import pandas as pd
-import fitz
-import docx
 import os
 import time
 
+import docx
+import fitz
+import pandas as pd
+import requests
+import streamlit as st
+
 API_BASE = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 MATCH_ENDPOINT = f"{API_BASE}/match_resume"
+
 
 def analyze_resume_with_retry(payload, max_retries=5, delay=2, timeout=30):
     for attempt in range(max_retries):
@@ -23,7 +25,9 @@ def analyze_resume_with_retry(payload, max_retries=5, delay=2, timeout=30):
             time.sleep(delay)
     return False, None, "Backend service not responding"
 
+
 st.set_page_config(page_title="Smart Resume Screener UI", page_icon="📄", layout="wide")
+
 
 def extract_text_from_file(uploaded_file):
     try:
@@ -38,6 +42,7 @@ def extract_text_from_file(uploaded_file):
     except Exception as e:
         st.error(f"Error reading file: {e}")
         return None
+
 
 st.title("📄 Smart Resume Screener")
 
@@ -75,11 +80,16 @@ if st.button("Find Best Matching Jobs"):
             success, result, error_msg = analyze_resume_with_retry(payload)
             if success:
                 matches = result["matches"]
-                results_df = pd.DataFrame([{
-                    "Job Title": m["job_title"],
-                    "Rank": m["rank"],
-                    "Similarity Score": m["similarity_score"]
-                } for m in matches])
+                results_df = pd.DataFrame(
+                    [
+                        {
+                            "Job Title": m["job_title"],
+                            "Rank": m["rank"],
+                            "Similarity Score": m["similarity_score"],
+                        }
+                        for m in matches
+                    ]
+                )
                 status_placeholder.empty()
                 with results_placeholder:
                     st.success("✅ Analysis complete!")
@@ -90,13 +100,19 @@ if st.button("Find Best Matching Jobs"):
                             with st.container():
                                 st.markdown("---")
                                 st.markdown(f"### #{row['Rank']} - {row['Job Title']}")
-                                c1, c2 = st.columns([3,1])
+                                c1, c2 = st.columns([3, 1])
                                 with c1:
-                                    st.progress(row['Similarity Score'])
+                                    st.progress(row["Similarity Score"])
                                 with c2:
-                                    st.markdown(f"**Match:** `{row['Similarity Score']:.2%}`")
+                                    st.markdown(
+                                        f"**Match:** `{row['Similarity Score']:.2%}`"
+                                    )
                                 with st.expander("🔍 View Job Description"):
-                                    st.markdown(job_descriptions_dict.get(row['Job Title'], "Not available"))
+                                    st.markdown(
+                                        job_descriptions_dict.get(
+                                            row["Job Title"], "Not available"
+                                        )
+                                    )
             else:
                 with status_placeholder:
                     st.error(f"❌ {error_msg}")

@@ -1,29 +1,33 @@
 """
 FastAPI Application for the MLOps Resume Matching App
 """
+import logging
 import os
 import time
-import logging
-from io import BytesIO, StringIO
-from typing import List, Dict
-from datetime import datetime
 from contextlib import asynccontextmanager
+from datetime import datetime
+from io import BytesIO, StringIO
+from typing import Dict, List
 
 import boto3
-import torch
 import pandas as pd
+import torch
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel, Field
-from prometheus_client import Counter, REGISTRY,  Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
 from fastapi.responses import Response
+from prometheus_client import (CONTENT_TYPE_LATEST, REGISTRY, Counter, Gauge,
+                               Histogram, generate_latest)
+from pydantic import BaseModel, Field
 from sentence_transformers import SentenceTransformer, util
 
 # --- 1. Load environment ---
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
+
 
 # --- 2. Configuration ---
 class AppConfig:
@@ -35,6 +39,7 @@ class AppConfig:
     MODEL_NAME = "sentence-transformers/all-MiniLM-L6-v2"
     MODEL_VERSION = "1.0"
 
+
 CONFIG = AppConfig()
 
 # --- 3. Global state ---
@@ -42,16 +47,15 @@ state = {
     "sbert_model": None,
     "job_embeddings": None,
     "df_job_description": None,
-    "model_info": {"model_name": CONFIG.MODEL_NAME, "version": CONFIG.MODEL_VERSION}
+    "model_info": {"model_name": CONFIG.MODEL_NAME, "version": CONFIG.MODEL_VERSION},
 }
-
 
 
 def get_metric(metric_type, name, description, labels=None):
     """Return existing metric if already registered, else create a new one."""
     if name in REGISTRY._names_to_collectors:
         return REGISTRY._names_to_collectors[name]
-    
+
     if metric_type == "counter":
         return Counter(name, description, labels or [])
     elif metric_type == "histogram":
@@ -61,19 +65,42 @@ def get_metric(metric_type, name, description, labels=None):
     else:
         raise ValueError(f"Unknown metric type: {metric_type}")
 
+
 # --- 4. Lifespan ---
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Prometheus metrics
     app.state.METRICS = {
-    "requests_total": get_metric("counter", "matching_requests_total", "Total number of matching requests.", ["model_version", "status"]),
-    "duration_seconds": get_metric("histogram", "matching_duration_seconds", "Time spent processing a matching request.", ["model_version"]),
-    "load_time_seconds": get_metric("gauge", "model_load_seconds", "Time taken to load models and embeddings."),
-    "errors_total": get_metric("counter", "api_errors_total", "Total API errors.", ["error_type"]),
-    "similarity_score": get_metric("histogram", "match_similarity_score", "Distribution of similarity scores for the top match.", ["model_version"]),
-    "http_requests_duration": get_metric("histogram", "http_request_duration_seconds", "HTTP request latency", ["method", "endpoint", "status_code"])
-
-
+        "requests_total": get_metric(
+            "counter",
+            "matching_requests_total",
+            "Total number of matching requests.",
+            ["model_version", "status"],
+        ),
+        "duration_seconds": get_metric(
+            "histogram",
+            "matching_duration_seconds",
+            "Time spent processing a matching request.",
+            ["model_version"],
+        ),
+        "load_time_seconds": get_metric(
+            "gauge", "model_load_seconds", "Time taken to load models and embeddings."
+        ),
+        "errors_total": get_metric(
+            "counter", "api_errors_total", "Total API errors.", ["error_type"]
+        ),
+        "similarity_score": get_metric(
+            "histogram",
+            "match_similarity_score",
+            "Distribution of similarity scores for the top match.",
+            ["model_version"],
+        ),
+        "http_requests_duration": get_metric(
+            "histogram",
+            "http_request_duration_seconds",
+            "HTTP request latency",
+            ["method", "endpoint", "status_code"],
+        ),
     }
 
     start_time = time.time()
@@ -88,9 +115,15 @@ async def lifespan(app: FastAPI):
         s3_resource = boto3.resource("s3")
 
         # Job descriptions
-        job_desc_obj = s3_client.get_object(Bucket=CONFIG.S3_BUCKET_NAME, Key=CONFIG.JOB_DATA_S3_KEY)
-        state["df_job_description"] = pd.read_csv(StringIO(job_desc_obj["Body"].read().decode("utf-8")))
-        logger.info(f"✅ Job descriptions loaded ({len(state['df_job_description'])} rows).")
+        job_desc_obj = s3_client.get_object(
+            Bucket=CONFIG.S3_BUCKET_NAME, Key=CONFIG.JOB_DATA_S3_KEY
+        )
+        state["df_job_description"] = pd.read_csv(
+            StringIO(job_desc_obj["Body"].read().decode("utf-8"))
+        )
+        logger.info(
+            f"✅ Job descriptions loaded ({len(state['df_job_description'])} rows)."
+        )
 
         # Download SBERT model
         if not os.path.exists(CONFIG.LOCAL_MODEL_PATH):
@@ -98,8 +131,10 @@ async def lifespan(app: FastAPI):
 
         bucket = s3_resource.Bucket(CONFIG.S3_BUCKET_NAME)
         for obj in bucket.objects.filter(Prefix=CONFIG.MODEL_S3_KEY):
-            target = os.path.join(CONFIG.LOCAL_MODEL_PATH, os.path.relpath(obj.key, CONFIG.MODEL_S3_KEY))
-            if obj.key[-1] != '/':
+            target = os.path.join(
+                CONFIG.LOCAL_MODEL_PATH, os.path.relpath(obj.key, CONFIG.MODEL_S3_KEY)
+            )
+            if obj.key[-1] != "/":
                 if not os.path.exists(os.path.dirname(target)):
                     os.makedirs(os.path.dirname(target))
                 bucket.download_file(obj.key, target)
@@ -109,7 +144,9 @@ async def lifespan(app: FastAPI):
 
         # Load embeddings
         embeddings_buffer = BytesIO()
-        s3_client.download_fileobj(CONFIG.S3_BUCKET_NAME, CONFIG.EMBEDDINGS_S3_KEY, embeddings_buffer)
+        s3_client.download_fileobj(
+            CONFIG.S3_BUCKET_NAME, CONFIG.EMBEDDINGS_S3_KEY, embeddings_buffer
+        )
         embeddings_buffer.seek(0)
         state["job_embeddings"] = torch.load(embeddings_buffer)
         logger.info(f"✅ Job embeddings loaded: {state['job_embeddings'].shape}.")
@@ -125,39 +162,59 @@ async def lifespan(app: FastAPI):
     yield
     logger.info("🔌 Shutting down application...")
 
-# --- 5. FastAPI ---
-app = FastAPI(title="Resume Matching API", description="MLOps API for matching resumes.", version="1.0.0", lifespan=lifespan)
 
-app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=True, allow_methods=["*"], allow_headers=["*"])
+# --- 5. FastAPI ---
+app = FastAPI(
+    title="Resume Matching API",
+    description="MLOps API for matching resumes.",
+    version="1.0.0",
+    lifespan=lifespan,
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 # --- 6. Pydantic Models ---
 class MatchRequest(BaseModel):
     resume_text: str = Field(..., min_length=50)
     top_n: int = Field(5, gt=0, le=50)
 
+
 class MatchResult(BaseModel):
     rank: int
     job_title: str
     similarity_score: float
 
+
 class MatchResponse(BaseModel):
     matches: List[MatchResult]
     model_info: Dict[str, str]
+
 
 # --- 7. Endpoints ---
 @app.get("/")
 def root():
     return {"message": "Resume Matching API is running."}
 
+
 @app.get("/health")
 def health_check():
     return {
-        "status": "healthy" if state["sbert_model"] is not None and state["job_embeddings"] is not None else "degraded",
+        "status": "healthy"
+        if state["sbert_model"] is not None and state["job_embeddings"] is not None
+        else "degraded",
         "timestamp": datetime.now().isoformat(),
         "model_loaded": state["sbert_model"] is not None,
         "embeddings_loaded": state["job_embeddings"] is not None,
         "model_info": state["model_info"],
     }
+
 
 @app.post("/match_resume", response_model=MatchResponse)
 def match_resume(request: MatchRequest, http_request: Request):
@@ -165,42 +222,56 @@ def match_resume(request: MatchRequest, http_request: Request):
     metrics = http_request.app.state.METRICS
     version_label = state["model_info"].get("version", "unknown")
 
-    if not state["sbert_model"] or not isinstance(state["job_embeddings"], torch.Tensor):
+    if not state["sbert_model"] or not isinstance(
+        state["job_embeddings"], torch.Tensor
+    ):
         metrics["errors_total"].labels(error_type="model_not_loaded").inc()
         raise HTTPException(status_code=503, detail="Model or embeddings not loaded")
 
     try:
-        resume_embedding = state["sbert_model"].encode(request.resume_text, convert_to_tensor=True)
+        resume_embedding = state["sbert_model"].encode(
+            request.resume_text, convert_to_tensor=True
+        )
         cos_scores = util.cos_sim(resume_embedding, state["job_embeddings"])[0]
         k = min(request.top_n, len(state["df_job_description"]))
         top_results = torch.topk(cos_scores, k=k)
 
         matches = [
             MatchResult(
-                rank=i+1,
+                rank=i + 1,
                 job_title=state["df_job_description"].iloc[idx.item()]["Job Title"],
-                similarity_score=score.item()
+                similarity_score=score.item(),
             )
             for i, (score, idx) in enumerate(zip(top_results[0], top_results[1]))
         ]
 
         duration = time.time() - start_time
-        metrics["duration_seconds"].labels(model_version=version_label).observe(duration)
-        metrics["requests_total"].labels(model_version=version_label, status="success").inc()
+        metrics["duration_seconds"].labels(model_version=version_label).observe(
+            duration
+        )
+        metrics["requests_total"].labels(
+            model_version=version_label, status="success"
+        ).inc()
         if matches:
-            metrics["similarity_score"].labels(model_version=version_label).observe(matches[0].similarity_score)
+            metrics["similarity_score"].labels(model_version=version_label).observe(
+                matches[0].similarity_score
+            )
 
         return MatchResponse(matches=matches, model_info=state["model_info"])
 
     except Exception as e:
-        metrics["requests_total"].labels(model_version=version_label, status="error").inc()
+        metrics["requests_total"].labels(
+            model_version=version_label, status="error"
+        ).inc()
         metrics["errors_total"].labels(error_type="matching_error").inc()
         logger.exception(f"Error during matching: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/metrics")
 def metrics():
     return Response(content=generate_latest(), media_type=CONTENT_TYPE_LATEST)
+
 
 @app.get("/model/info")
 def get_model_info():
@@ -209,9 +280,14 @@ def get_model_info():
     return {
         "model_info": state["model_info"],
         "loaded": True,
-        "job_embeddings_shape": list(state["job_embeddings"].shape) if state["job_embeddings"] is not None else None,
-        "total_jobs_indexed": len(state["df_job_description"]) if state["df_job_description"] is not None else 0,
+        "job_embeddings_shape": list(state["job_embeddings"].shape)
+        if state["job_embeddings"] is not None
+        else None,
+        "total_jobs_indexed": len(state["df_job_description"])
+        if state["df_job_description"] is not None
+        else 0,
     }
+
 
 # --- Middleware ---
 @app.middleware("http")
@@ -223,11 +299,13 @@ async def add_metrics_middleware(request: Request, call_next):
         request.app.state.METRICS["http_requests_duration"].labels(
             method=request.method,
             endpoint=request.url.path,
-            status_code=response.status_code
+            status_code=response.status_code,
         ).observe(duration)
     return response
+
 
 # --- Run locally ---
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
