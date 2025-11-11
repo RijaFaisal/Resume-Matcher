@@ -132,6 +132,7 @@ try {
     Write-Host "  MLflow UI:                http://localhost:5000"
     Write-Host "  Prometheus UI:            http://localhost:9090"
     Write-Host "  Grafana UI:               http://localhost:3000 (admin/admin)"
+    Write-Host "  Evidently UI:             http://localhost:7000"
     Write-Host ""
     Write-Host "Note: Update .env with AWS credentials so the API can load the model and embeddings from S3." -ForegroundColor Yellow
 }
