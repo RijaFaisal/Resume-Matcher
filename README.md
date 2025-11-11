@@ -10,7 +10,7 @@
 
 An end-to-end MLOps pipeline that intelligently matches resumes to job descriptions using semantic search. This project is built with a production-grade stack, featuring an **interactive Streamlit UI**, a scalable FastAPI backend, real-time monitoring, CI/CD, and automated workflows.
 
-###Eperience the app live: 
+### Eperience the app live: 
 * Frontend: http://16.16.197.220:8501
 * Backend: http://16.16.197.220:8000/docs
 ---
