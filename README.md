@@ -10,7 +10,7 @@
 
 An end-to-end MLOps pipeline that intelligently matches resumes to job descriptions using semantic search. This project is built with a production-grade stack, featuring an **interactive Streamlit UI**, a scalable FastAPI backend, real-time monitoring, CI/CD, and automated workflows.
 
-### Eperience the app live: 
+### Eperience the app live (hosted on AWS): 
 * Frontend: http://16.16.197.220:8501
 * Backend: http://16.16.197.220:8000/docs
 ---
@@ -167,6 +167,44 @@ This project is built with a focus on automation, code quality, and a robust CI/
 ---
 
 ### 📐 Architecture
+graph LR
+    %% STYLE CLASSES %%
+    classDef data fill:#e3f2fd,stroke:#2196f3,stroke-width:2px,color:#000,rx:8px,ry:8px;
+    classDef ml fill:#ede7f6,stroke:#673ab7,stroke-width:2px,color:#000,rx:8px,ry:8px;
+    classDef infra fill:#fff3cd,stroke:#f4b400,stroke-width:2px,color:#000,rx:8px,ry:8px;
+    classDef monitor fill:#fde7e7,stroke:#e53935,stroke-width:2px,color:#000,rx:8px,ry:8px;
+    classDef frontend fill:#d4f8d4,stroke:#4caf50,stroke-width:2px,color:#000,rx:8px,ry:8px;
+
+    %% DATA FLOW %%
+    A[📂 Raw Data Sources<br/>(Resumes & Job Descriptions)]:::data --> B[(☁️ AWS S3 Bucket<br/>Data & Model Storage)]:::infra
+    B --> C[🧮 Data Processing<br/>Jupyter Notebooks]:::ml
+    C --> D[🧠 Model Training<br/>(Sentence-Transformer)]:::ml
+    D --> E[📈 MLflow Tracking<br/>Experiments & Artifacts]:::monitor
+    E --> B
+
+    %% INFERENCE PIPELINE %%
+    D --> F[⚡ FastAPI Backend<br/>(Inference API)]:::frontend
+    F --> G[🎨 Streamlit UI<br/>(Frontend)]:::frontend
+    F -->|Metrics| H[📊 Prometheus]:::monitor
+    H --> I[📉 Grafana Dashboard]:::monitor
+
+    %% MONITORING %%
+    C --> J[🧪 Evidently AI<br/>Data Drift Detection]:::monitor
+    J --> K[📊 Drift Dashboard<br/>(Evidently UI)]:::monitor
+
+    %% CI/CD & DEPLOYMENT %%
+    L[🔄 GitHub Actions<br/>(CI/CD Pipeline)]:::infra --> M[(🐳 AWS ECR<br/>Container Registry)]:::infra
+    M --> N[☁️ AWS EC2<br/>Production Deployment]:::infra
+    N --> B
+    N --> F
+    N --> G
+    N --> H
+    N --> I
+    N --> K
+
+    %% CLASS ASSIGNMENTS %%
+    class A,B,C,D,E,F,G,H,I,J,K,L,M,N data,ml,infra,frontend,monitor;
+
 
 The architecture is designed to be modular, scalable, and observable, following best practices for MLOps.
 
