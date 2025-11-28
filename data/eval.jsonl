@@ -1,21 +1,20 @@
-{"query": "Summarize this job description in one short paragraph.", "expected": "A concise paragraph capturing responsibilities, skills, and qualifications."}
-{"query": "What are the key responsibilities listed in the job?", "expected": "A list of responsibilities mentioned in the job description."}
-{"query": "Extract the required skills from this job description.", "expected": "A bullet list of required skills."}
-{"query": "What qualifications does the job require?", "expected": "A summary of the education or certifications required."}
-{"query": "Explain this job role to a non-technical person.", "expected": "A simple explanation suitable for a general audience."}
-{"query": "Give three strengths needed for this position.", "expected": "Three soft or hard strengths relevant to the role."}
-{"query": "What experience level is this job targeting?", "expected": "Entry, mid, or senior level depending on the description."}
-{"query": "Does this role require leadership experience?", "expected": "Yes or no, based on mentions of team leading or management."}
-{"query": "Identify the tech stack mentioned in the job description.", "expected": "List of programming languages, tools, or frameworks."}
-{"query": "Provide two possible interview questions for this role.", "expected": "Two relevant interview questions."}
-{"query": "Rewrite the job description in simpler language.", "expected": "A simplified rewrite of the job details."}
-{"query": "Summarize the company expectations for this role.", "expected": "A short overview of expectations and responsibilities."}
-{"query": "Extract any preferred qualifications.", "expected": "Preferred degrees, tools, or experience if listed."}
-{"query": "Does this job mention remote or hybrid work?", "expected": "Yes or no with explanation."}
-{"query": "List three challenges someone in this role may face.", "expected": "Three realistic challenges based on responsibilities."}
-{"query": "What teams will this role collaborate with?", "expected": "Teams or departments mentioned in the description."}
-{"query": "What is the main objective of this job position?", "expected": "The core purpose or focus of the job."}
-{"query": "How does this role contribute to the company?", "expected": "A short explanation of impact based on job description."}
-{"query": "Extract all action verbs from the job description.", "expected": "A list of verbs describing responsibilities."}
-{"query": "Provide a 1-sentence summary of the job.", "expected": "One compact sentence describing the job."}
-
+{"id":1,"candidate":"Experienced Python developer, ML projects, scikit-learn, PyTorch","job":"ML Engineer","ground_truth":"High"}
+{"id":2,"candidate":"Frontend React developer, Redux, CSS, 2 years","job":"Backend Node.js Developer","ground_truth":"Low"}
+{"id":3,"candidate":"Data analyst with SQL, Tableau, Excel","job":"Business Analyst","ground_truth":"Medium"}
+{"id":4,"candidate":"Junior data scientist, Python, SQL, internship experience","job":"Data Analyst","ground_truth":"High"}
+{"id":5,"candidate":"DevOps engineer, Docker, Kubernetes, AWS","job":"Site Reliability Engineer","ground_truth":"High"}
+{"id":6,"candidate":"Graphic designer, Photoshop, Illustrator","job":"UX Designer","ground_truth":"Medium"}
+{"id":7,"candidate":"Senior Java developer, Spring, microservices, 7 years","job":"Software Engineer (Java)","ground_truth":"High"}
+{"id":8,"candidate":"Customer support rep, phone & email support","job":"Sales Executive","ground_truth":"Low"}
+{"id":9,"candidate":"QA Engineer, Selenium, test automation, Python","job":"Test Automation Engineer","ground_truth":"High"}
+{"id":10,"candidate":"Researcher in NLP, published papers on transformers","job":"ML Researcher","ground_truth":"High"}
+{"id":11,"candidate":"Excel expert, data entry, 1 year experience","job":"Data Analyst","ground_truth":"Low"}
+{"id":12,"candidate":"Full-stack dev: React front, Node backend, PostgreSQL","job":"Full-stack Engineer","ground_truth":"High"}
+{"id":13,"candidate":"Business consultant, stakeholder management, PPT skills","job":"Product Manager","ground_truth":"Medium"}
+{"id":14,"candidate":"Embedded systems engineer, C, microcontrollers","job":"Firmware Engineer","ground_truth":"High"}
+{"id":15,"candidate":"Social media manager, content creation, Instagram","job":"Digital Marketing Specialist","ground_truth":"High"}
+{"id":16,"candidate":"Network admin, Cisco, routing, switching","job":"Cloud Engineer","ground_truth":"Medium"}
+{"id":17,"candidate":"Statistician, R, hypothesis testing, academic background","job":"Data Scientist","ground_truth":"Medium"}
+{"id":18,"candidate":"Content writer, SEO articles, WordPress","job":"Technical Writer","ground_truth":"Medium"}
+{"id":19,"candidate":"Python dev with Django, REST APIs, PostgreSQL","job":"Backend Developer","ground_truth":"High"}
+{"id":20,"candidate":"Customer success manager, B2B SaaS, account retention","job":"Customer Success Manager","ground_truth":"High"}
