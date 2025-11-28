@@ -1,0 +1,21 @@
+{"query": "Summarize this job description in one short paragraph.", "expected": "A concise paragraph capturing responsibilities, skills, and qualifications."}
+{"query": "What are the key responsibilities listed in the job?", "expected": "A list of responsibilities mentioned in the job description."}
+{"query": "Extract the required skills from this job description.", "expected": "A bullet list of required skills."}
+{"query": "What qualifications does the job require?", "expected": "A summary of the education or certifications required."}
+{"query": "Explain this job role to a non-technical person.", "expected": "A simple explanation suitable for a general audience."}
+{"query": "Give three strengths needed for this position.", "expected": "Three soft or hard strengths relevant to the role."}
+{"query": "What experience level is this job targeting?", "expected": "Entry, mid, or senior level depending on the description."}
+{"query": "Does this role require leadership experience?", "expected": "Yes or no, based on mentions of team leading or management."}
+{"query": "Identify the tech stack mentioned in the job description.", "expected": "List of programming languages, tools, or frameworks."}
+{"query": "Provide two possible interview questions for this role.", "expected": "Two relevant interview questions."}
+{"query": "Rewrite the job description in simpler language.", "expected": "A simplified rewrite of the job details."}
+{"query": "Summarize the company expectations for this role.", "expected": "A short overview of expectations and responsibilities."}
+{"query": "Extract any preferred qualifications.", "expected": "Preferred degrees, tools, or experience if listed."}
+{"query": "Does this job mention remote or hybrid work?", "expected": "Yes or no with explanation."}
+{"query": "List three challenges someone in this role may face.", "expected": "Three realistic challenges based on responsibilities."}
+{"query": "What teams will this role collaborate with?", "expected": "Teams or departments mentioned in the description."}
+{"query": "What is the main objective of this job position?", "expected": "The core purpose or focus of the job."}
+{"query": "How does this role contribute to the company?", "expected": "A short explanation of impact based on job description."}
+{"query": "Extract all action verbs from the job description.", "expected": "A list of verbs describing responsibilities."}
+{"query": "Provide a 1-sentence summary of the job.", "expected": "One compact sentence describing the job."}
+
