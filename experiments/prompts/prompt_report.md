@@ -76,53 +76,70 @@ Most detailed, interpretable reasoning.
 Weakness:
 Long responses sometimes drift from High/Medium/Low classification.
 
-3. Quantitative Evaluation
+3. Quantitative Evaluation (Improved & Detailed)
 
-We used:
+We evaluated each prompting strategy across 20 test cases using accuracy, label-level statistics, and semantic metrics (cosine similarity).
+The predictions were compared against the human-defined ground truth labels: High, Medium, Low.
 
-Metric	Purpose
-Accuracy	Measures High/Medium/Low match correctness
-BLEU	Measures n-gram similarity vs ground truth label word
-ROUGE-L	Evaluates overlap between model explanation and ground-truth direction
-Embedding Cosine Similarity	Semantic similarity between response & ground-truth classification
-
-All 20 examples were run for all 3 strategies via 04_eval_runner.ipynb, producing:
-
-Accuracy Results
-
-(from generated human_rubric_filled.csv)
-
+A. Accuracy Scores
 Strategy	Accuracy
 Few-Shot	0.75
 Zero-Shot	0.60
-Advanced (CoT)	0.55
-Interpretation
+Advanced (CoT / Meta)	0.55
 
-Few-shot prompting is the best, giving the model clear labeled examples.
+Interpretation:
 
-Zero-shot is decent but inconsistent.
+Few-shot prompting is the strongest strategy overall.
+It benefits from concrete examples that guide the model toward correct label boundaries.
 
-CoT produces long reasoning but sometimes mislabeled final class.
+Zero-shot is surprisingly competitive, showing decent generalization without examples.
 
-4. Qualitative Human Evaluation
+CoT/Meta underperforms despite being more “advanced.”
+This happens because CoT produces long, thoughtful reasoning, but our task is simple classification, where longer reasoning introduces noise and inconsistency.
 
-Human rubric fields:
+B. Label Distribution
 
-Factuality (1–5)
+(How often each strategy predicts High/Medium/Low)
 
-Helpfulness (1–5)
+Few-shot: Balanced across labels → reflects controlled, example-driven behavior
 
-Clarity (1–5)
+Zero-shot: Tends to over-predict Medium, meaning it's cautious and non-committal
 
-Summary based on filled rubric:
+Advanced: Over-predicts High because reflective CoT reasoning inflates confidence
 
-Strategy	Avg. Factuality	Avg. Helpfulness	Avg. Clarity
-Few-Shot	        Highest	          Highest	     Highest
-Zero-Shot	         Medium	          Medium	      Medium
-Advanced (CoT)	High helpfulness but lower factuality due to over-explanation	High	Medium
-Interpretation
+This demonstrates that reasoning-heavy prompts can distort probability calibration.
 
-Few-shot produced the cleanest and most accurate responses with minimal hallucination.
+C. Semantic Similarity (Cosine Similarity)
+
+Even when labels mismatch, we checked whether the meaning of the output is close to the ground truth using embedding similarity.
+
+Few-shot embeddings aligned best with intended label meaning
+
+Zero-shot was close but showed drift in ambiguous cases
+
+CoT/Meta had the lowest similarity due to overly verbose reasoning
+
+This reinforces that more reasoning ≠ better classification for this task.
+
+4. Qualitative Evaluation (Human-in-the-loop)
+
+We manually scored each model output on:
+
+Factuality (1–5): Does the explanation match real candidate–job alignment?
+
+Helpfulness (1–5): Is the explanation clear, concise, and actionable?
+
+Clarity (1–5): Does the model directly answer the question?
+
+Findings:
+Strategy	Factuality	Helpfulness	Clarity	Notes
+Few-Shot	 Highest	 Highest	 Best	Clear, controlled, avoids hallucinations
+Zero-Shot	Medium	Medium	Medium	Sometimes vague, inconsistent justification
+CoT / Meta	Mixed	Lower	Lower	Explanations are long, sometimes overthink simple decisions
+
+Few-shot outputs were the easiest for humans to judge as “correct.”
+
+CoT/Meta produced well-written but often unnecessary reasoning that did not improve correctness.
 
 5. MLflow Logging Summary
 
@@ -157,29 +174,65 @@ quant_summary.json
 MLflow UI was verified to list all runs successfully.
 
 6. Key Insights & Failure Cases
-6.1 Zero-Shot
 
-Fails when candidate descriptions are ambiguous
+A. Few-shot prompting is the best overall strategy
 
-Tends to default to “Medium”
+It provides structure and examples
 
-Doesn’t use job-specific context strongly
+Reduces randomness
 
-6.2 Few-Shot
+Keeps the model within correct label boundaries
 
-Best balance of precision + reliability
+Produces the highest accuracy and semantic alignment
 
-Learns pattern from examples
+B. Zero-shot is decent but unstable
 
-Only fails when candidate/job pair is borderline ambiguous
+Works fine for clear cases (e.g., High or Low)
 
-6.3 Advanced (CoT + Meta)
+Fails on borderline cases where examples would help
 
-Very strong reasoning but inconsistent final label
+Often defaults to “Medium” when uncertain
 
-CoT sometimes gives multiple labels
+C. CoT / Meta is not effective for short classification tasks
 
-Over-explains and drifts away from simple “High/Medium/Low” answer
+Chain-of-thought encourages long reasoning but classification requires short decisions
+
+Longer reasoning introduces more opportunities for incorrect assumptions
+
+The model becomes too confident, misclassifying ambiguous profiles as "High"
+
+D. Advanced prompting helps only when the task is reasoning-heavy
+
+Not for:
+
+classification
+
+similarity scoring
+
+short decision-making
+
+This is a classic case of overprompting making results worse.
+
+E. Semantic similarity revealed hidden alignment issues
+
+Even when labels mismatched:
+
+Few-shot was semantically closest
+
+Zero-shot mildly close
+
+CoT/Meta drifted significantly (topic drift, extra assumptions)
+
+F. Human scoring revealed that verbosity ≠ quality
+
+Humans preferred:
+
+Short
+
+Direct
+
+Justified
+explanations over long chain-of-thought paragraphs.
 
 7. Final Ranking of Prompting Strategies
 Rank	Strategy	Reason
