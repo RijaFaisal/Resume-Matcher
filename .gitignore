@@ -79,6 +79,8 @@ models/*.pb
 
 # ==================== IDE & EDITORS ====================
 # VSCode
+.env
+
 .vscode/
 *.code-workspace
 
