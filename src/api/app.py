@@ -10,7 +10,8 @@ from sentence_transformers import SentenceTransformer
 # ===============================
 #  SET YOUR GROQ API KEY HERE
 # ===============================
-GROQ_API_KEY = "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"
+import os
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 client = Groq(api_key=GROQ_API_KEY)
 
 # Print available models for debugging
