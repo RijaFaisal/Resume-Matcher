@@ -1,0 +1,20 @@
+{"id":1,"candidate":"Experienced Python developer, ML projects, scikit-learn, PyTorch","job":"ML Engineer","ground_truth":"High"}
+{"id":2,"candidate":"Frontend React developer, Redux, CSS, 2 years","job":"Backend Node.js Developer","ground_truth":"Low"}
+{"id":3,"candidate":"Data analyst with SQL, Tableau, Excel","job":"Business Analyst","ground_truth":"Medium"}
+{"id":4,"candidate":"Junior data scientist, Python, SQL, internship experience","job":"Data Analyst","ground_truth":"High"}
+{"id":5,"candidate":"DevOps engineer, Docker, Kubernetes, AWS","job":"Site Reliability Engineer","ground_truth":"High"}
+{"id":6,"candidate":"Graphic designer, Photoshop, Illustrator","job":"UX Designer","ground_truth":"Medium"}
+{"id":7,"candidate":"Senior Java developer, Spring, microservices, 7 years","job":"Software Engineer (Java)","ground_truth":"High"}
+{"id":8,"candidate":"Customer support rep, phone & email support","job":"Sales Executive","ground_truth":"Low"}
+{"id":9,"candidate":"QA Engineer, Selenium, test automation, Python","job":"Test Automation Engineer","ground_truth":"High"}
+{"id":10,"candidate":"Researcher in NLP, published papers on transformers","job":"ML Researcher","ground_truth":"High"}
+{"id":11,"candidate":"Excel expert, data entry, 1 year experience","job":"Data Analyst","ground_truth":"Low"}
+{"id":12,"candidate":"Full-stack dev: React front, Node backend, PostgreSQL","job":"Full-stack Engineer","ground_truth":"High"}
+{"id":13,"candidate":"Business consultant, stakeholder management, PPT skills","job":"Product Manager","ground_truth":"Medium"}
+{"id":14,"candidate":"Embedded systems engineer, C, microcontrollers","job":"Firmware Engineer","ground_truth":"High"}
+{"id":15,"candidate":"Social media manager, content creation, Instagram","job":"Digital Marketing Specialist","ground_truth":"High"}
+{"id":16,"candidate":"Network admin, Cisco, routing, switching","job":"Cloud Engineer","ground_truth":"Medium"}
+{"id":17,"candidate":"Statistician, R, hypothesis testing, academic background","job":"Data Scientist","ground_truth":"Medium"}
+{"id":18,"candidate":"Content writer, SEO articles, WordPress","job":"Technical Writer","ground_truth":"Medium"}
+{"id":19,"candidate":"Python dev with Django, REST APIs, PostgreSQL","job":"Backend Developer","ground_truth":"High"}
+{"id":20,"candidate":"Customer success manager, B2B SaaS, account retention","job":"Customer Success Manager","ground_truth":"High"}

@@ -7,4 +7,8 @@
     "pooling_mode_weightedmean_tokens": false,
     "pooling_mode_lasttoken": false,
     "include_prompt": true
+<<<<<<< HEAD
 }
+=======
+}
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a

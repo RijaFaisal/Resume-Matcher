@@ -1,16 +1,9 @@
-"""
-Tests for the ResumeMatcher model.
-"""
+from src.api.main import MatchRequest, MatchResponse, match_resume
 
-import pytest
-from unittest.mock import Mock, patch, AsyncMock
-import numpy as np
-from sklearn.feature_extraction.text import TfidfVectorizer
-from sklearn.ensemble import RandomForestClassifier
-
-from src.model import ResumeMatcher
+SAMPLE_RESUME = "Experienced data scientist with Python, ML, and SQL expertise. Looking for new challenges."
 
 
+<<<<<<< HEAD
 class TestResumeMatcher:
     """Test class for ResumeMatcher model."""
     
@@ -215,6 +208,12 @@ SAMPLE_RESUME = "Experienced data scientist with Python, ML, and SQL expertise. 
 def test_match_resume_logic():
     class DummyRequest:
         app = type("App", (), {"state": match_resume.__globals__["app"].state})()
+=======
+def test_match_resume_logic():
+    class DummyRequest:
+        app = type("App", (), {"state": match_resume.__globals__["app"].state})()
+
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
     req = MatchRequest(resume_text=SAMPLE_RESUME, top_n=2)
     response = match_resume(req, DummyRequest())
     assert isinstance(response, MatchResponse)

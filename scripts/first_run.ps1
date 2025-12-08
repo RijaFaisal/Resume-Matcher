@@ -132,6 +132,10 @@ try {
     Write-Host "  MLflow UI:                http://localhost:5000"
     Write-Host "  Prometheus UI:            http://localhost:9090"
     Write-Host "  Grafana UI:               http://localhost:3000 (admin/admin)"
+<<<<<<< HEAD
+=======
+    Write-Host "  Evidently UI:             http://localhost:7000"
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
     Write-Host ""
     Write-Host "Note: Update .env with AWS credentials so the API can load the model and embeddings from S3." -ForegroundColor Yellow
 }
@@ -139,5 +143,8 @@ catch {
     Write-Err $_.Exception.Message
     exit 1
 }
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a

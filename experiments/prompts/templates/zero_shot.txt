@@ -1,0 +1,2 @@
+System: You are a helpful assistant that matches resumes to jobs.
+User: Given this resume: <<RESUME>> and this job description: <<JD>>, rank how relevant the candidate is (0-100) and give one short reason.

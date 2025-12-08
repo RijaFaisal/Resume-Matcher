@@ -1,7 +1,14 @@
 import os
+<<<<<<< HEAD
 import pandas as pd
 from evidently.report import Report
 from evidently.metric_preset import DataDriftPreset, TextOverviewPreset
+=======
+
+import pandas as pd
+from evidently.metric_preset import DataDriftPreset, TextOverviewPreset
+from evidently.report import Report
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 from evidently.ui.workspace import Workspace
 
 
@@ -35,5 +42,8 @@ def main():
 
 if __name__ == "__main__":
     main()
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a

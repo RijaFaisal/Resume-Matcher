@@ -1,13 +1,130 @@
-# Byte-compiled / optimized / DLL files
+# ==================== PYTHON ====================
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
-
-# Distribution / packaging
 .Python
+
+# Virtual Environments
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Environment Variables
+.env
+.env.local
+.env.*.local
+
+# Testing
+.pytest_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.tox/
+.nox/
+coverage.xml
+*.cover
+*.log
+.cache
+nosetests.xml
+
+# ==================== MLFLOW ====================
+mlruns/
+mlflow-artifacts/
+*.db
+*.db-shm
+*.db-wal
+
+# ==================== EVIDENTLY ====================
+monitoring/evidently/workspace/
+monitoring/evidently/reports/*.html
+monitoring/evidently/reports/*.json
+
+# ==================== DATA ====================
+# Exclude raw and processed data (too large for git)
+data/raw/*.csv
+data/raw/*.json
+data/processed/*.csv
+data/processed/*.json
+
+# Keep directory structure with .gitkeep
+!data/raw/.gitkeep
+!data/processed/.gitkeep
+
+# ==================== MODELS ====================
+# Exclude trained models (use DVC or S3 instead)
+models/*.pkl
+models/*.joblib
+models/*.h5
+models/*.pt
+models/*.pth
+models/*.onnx
+models/*.pb
+
+# Keep directory structure
+!models/.gitkeep
+!models/README.md
+
+# ==================== JUPYTER ====================
+.ipynb_checkpoints/
+*/.ipynb_checkpoints/*
+*.ipynb_checkpoints
+
+# Jupyter Notebook outputs (optional - uncomment to keep notebooks clean)
+# *.ipynb
+
+# ==================== IDE & EDITORS ====================
+# VSCode
+.env
+
+.vscode/
+*.code-workspace
+
+# PyCharm
+.idea/
+*.iml
+
+# Sublime Text
+*.sublime-project
+*.sublime-workspace
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+.\#*
+
+# ==================== DOCKER ====================
+*.log
+docker-compose.override.yml
+
+# ==================== CLOUD & SECRETS ====================
+# AWS
+.aws/
+*.pem
+
+# GCP
+*.json.gcp
+*-key.json
+gcp-credentials.json
+
+# Azure
+.azure/
+
+# Credentials
+credentials.json
+secrets.yaml
+*.key
+
+# ==================== BUILD & DISTRIBUTION ====================
 build/
 develop-eggs/
 dist/
@@ -20,12 +137,9 @@ parts/
 sdist/
 var/
 wheels/
-pip-wheel-metadata/
-share/python-wheels/
 *.egg-info/
 .installed.cfg
 *.egg
-MANIFEST
 
 # PyInstaller
 #  Usually these files are written by a python script from a template
@@ -160,9 +274,14 @@ logs/
 *.swo
 
 # OS
+# ==================== OS ====================
+# macOS
 .DS_Store
-Thumbs.db
+.AppleDouble
+.LSOverride
+._*
 
+<<<<<<< HEAD
 # Monitoring
 monitoring/data/
 # ==================== PYTHON ====================
@@ -313,6 +432,8 @@ wheels/
 .LSOverride
 ._*
 
+=======
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 # Windows
 Thumbs.db
 ehthumbs.db
@@ -365,4 +486,8 @@ site/
 !CONTRIBUTION.md
 !CODE_OF_CONDUCT.md
 notebooks/sbert_model_from_S3
+<<<<<<< HEAD
 monitoring/evidently/reports
+=======
+monitoring/evidently/reports
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a

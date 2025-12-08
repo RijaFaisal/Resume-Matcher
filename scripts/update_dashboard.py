@@ -1,6 +1,13 @@
+<<<<<<< HEAD
 import requests
 import sys
 
+=======
+import sys
+
+import requests
+
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 
 def main(project_id: str) -> None:
     payload = {
@@ -9,8 +16,21 @@ def main(project_id: str) -> None:
         "dashboard": {
             "name": "Resume NLP Monitoring",
             "panels": [
+<<<<<<< HEAD
                 {"title": "Text Overview", "filter": {"metadata_values": {}, "tag_values": []}, "size": 2},
                 {"title": "Data Drift", "filter": {"metadata_values": {}, "tag_values": []}, "size": 2},
+=======
+                {
+                    "title": "Text Overview",
+                    "filter": {"metadata_values": {}, "tag_values": []},
+                    "size": 2,
+                },
+                {
+                    "title": "Data Drift",
+                    "filter": {"metadata_values": {}, "tag_values": []},
+                    "size": 2,
+                },
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
             ],
         },
     }
@@ -25,5 +45,8 @@ if __name__ == "__main__":
         print("Usage: update_dashboard.py <project_id>")
         sys.exit(1)
     main(sys.argv[1])
+<<<<<<< HEAD
 
 
+=======
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
