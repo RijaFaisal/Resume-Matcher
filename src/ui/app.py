@@ -41,12 +41,32 @@ def extract_text_from_file(uploaded_file):
 
 st.title("📄 Smart Resume Screener")
 
+# Try multiple possible paths for the job descriptions file
+job_file_paths = [
+    "job_title_des.csv",  # Root directory
+    "notebooks/job_title_des.csv",  # Notebooks directory
+    "src/ui/notebooks/job_title_des.csv",  # UI notebooks directory
+]
+
+df_jobs = None
+for path in job_file_paths:
+    try:
+        if os.path.exists(path):
+            df_jobs = pd.read_csv(path)
+            break
+    except Exception:
+        continue
+
+if df_jobs is None:
+    st.error("job_title_des.csv not found. Please ensure the file exists in one of these locations:")
+    st.code("\n".join(job_file_paths))
+    st.stop()
+
 try:
-    df_jobs = pd.read_csv("notebooks/job_title_des.csv")
     job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
     job_titles = df_jobs["Job Title"].tolist()
-except FileNotFoundError:
-    st.error("job_title_des.csv not found in notebooks/")
+except KeyError as e:
+    st.error(f"CSV file missing required column: {e}")
     st.stop()
 
 st.subheader("Provide Your Resume")

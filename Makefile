@@ -139,7 +139,7 @@ help: ## Show this help message
 
 dev: ## Start development environment
 	pip install -r requirements.txt
-	python -m uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+	python -m uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
 
 install: ## Install dependencies
 	pip install -r requirements.txt
@@ -184,3 +184,24 @@ mlflow: ## Start MLflow server
 
 evidently: ## Start Evidently dashboard
 	evidently ui --host 0.0.0.0 --port 7000
+
+test-guardrails: ## Run guardrails tests
+	pytest tests/test_guardrails.py -v --cov=src.guardrails --cov-report=term --cov-report=html
+
+test-monitoring: ## Run monitoring tests
+	pytest tests/test_monitoring.py -v --cov=src.monitoring --cov-report=term --cov-report=html
+
+rag: ## Run full RAG pipeline end-to-end
+	@echo "🔄 Running RAG pipeline with guardrails and monitoring..."
+	@echo "Step 1: Ingesting documents into vector store..."
+	python -m src.api.ingest --data_dir ./data --index_dir ./vectorstore
+	@echo "✅ Ingestion complete."
+	@echo "Step 2: Starting RAG API server with guardrails and monitoring..."
+	uvicorn src.api.app:app --host 0.0.0.0 --port 8001
+
+monitoring-dashboard: ## Open Grafana monitoring dashboard
+	@echo "📊 Opening monitoring dashboards..."
+	@echo "Grafana: http://localhost:3000"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "API Metrics: http://localhost:8000/metrics"
+	@open "http://localhost:3000" || xdg-open "http://localhost:3000" || echo "Please open http://localhost:3000"

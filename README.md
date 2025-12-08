@@ -59,6 +59,104 @@ make install
 make dev
 ```
 
+## 🛡️ Guardrails & Safety (D3)
+
+This system includes comprehensive guardrails for safe AI interactions:
+
+### Features
+- ✅ **Input Validation**: PII detection, prompt injection filtering
+- ✅ **Output Moderation**: Toxicity filtering, hallucination detection
+- ✅ **Policy Engine**: Three enforcement modes (PERMISSIVE, BALANCED, STRICT)
+- ✅ **Real-time Metrics**: Monitor violations and performance
+
+### Quick Start
+```python
+from src.guardrails import PolicyEngine, GuardrailsConfig, PolicyMode
+
+# Initialize guardrails
+config = GuardrailsConfig(mode=PolicyMode.BALANCED)
+engine = PolicyEngine(config)
+
+# Validate input
+result = engine.validate_input(user_input)
+if not result.allowed:
+    return {"error": "Input validation failed"}
+
+# Moderate output
+result = engine.moderate_output(llm_output)
+if not result.allowed:
+    return {"output": result.filtered_output}
+```
+
+### Endpoints
+```bash
+# Get guardrails metrics
+GET /guardrails/metrics
+
+# Reset metrics
+POST /guardrails/metrics/reset
+```
+
+### Documentation
+See [D3_GUARDRAILS_REPORT.md](D3_GUARDRAILS_REPORT.md) for complete documentation.
+
+## 📊 LLM Evaluation & Monitoring (D4)
+
+Comprehensive monitoring system with Prometheus, Grafana, and Evidently AI:
+
+### Features
+- ✅ **Prometheus Metrics**: 15+ metrics (latency, tokens, cost, errors)
+- ✅ **Grafana Dashboard**: 19 panels with real-time visualization
+- ✅ **Token & Cost Tracking**: All major LLM providers supported
+- ✅ **Evidently AI**: Data drift detection and quality monitoring
+- ✅ **TTFT Tracking**: Time to first token for streaming responses
+
+### Metrics Tracked
+```python
+from src.monitoring import LLMMetricsTracker, LLMProvider
+
+tracker = LLMMetricsTracker()
+tracker.start_request(provider=LLMProvider.OPENAI, model="gpt-4")
+tracker.record_input(user_input)
+
+# Make LLM call...
+
+tracker.record_output(response)
+tracker.record_tokens(prompt_tokens=100, completion_tokens=50)
+metrics = tracker.end_request(success=True)
+
+print(f"Latency: {metrics.total_latency_ms}ms")
+print(f"Tokens: {metrics.total_tokens}")
+print(f"Cost: ${metrics.total_cost:.6f}")
+```
+
+### Access Dashboards
+```bash
+# Grafana (LLM monitoring dashboard)
+http://localhost:3000
+
+# Prometheus (raw metrics)
+http://localhost:9090
+
+# Evidently (drift reports)
+POST http://localhost:8000/monitoring/generate-drift-report
+```
+
+### Monitoring Endpoints
+```bash
+# Get monitoring statistics
+GET /monitoring/stats
+
+# Get cost trends
+GET /monitoring/cost-trends
+
+# Generate drift report
+POST /monitoring/generate-drift-report
+```
+
+### Documentation
+See [D4_MONITORING_REPORT.md](D4_MONITORING_REPORT.md) for complete documentation.
+
 ### Environment Variables
 Copy `.env.example` to `.env` and configure:
 ```bash
@@ -76,7 +174,16 @@ pytest tests/ -v --cov=src --cov-report=html
 
 # Run specific test file
 pytest tests/test_api.py -v
+
+# Run guardrails tests
+pytest tests/test_guardrails.py -v
 ```
+
+### Test Coverage
+- API endpoints: `tests/test_api.py`
+- Model functionality: `tests/test_model.py`
+- **Guardrails (D3)**: `tests/test_guardrails.py` (40 tests)
+- Data preprocessing: `tests/test_preprocessing.py`
 
 ## 🐳 Docker
 
