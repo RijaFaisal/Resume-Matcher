@@ -115,7 +115,7 @@ class PIIDetector:
 
 class PromptInjectionFilter:
     """
-    Detects and filters potential prompt injection attacks.
+    Detects and filters potential prompt injection attacks, SQL injection, and XSS attacks.
     
     Checks for:
     - System prompt overrides
@@ -123,6 +123,8 @@ class PromptInjectionFilter:
     - Instruction hijacking
     - Delimiter confusion
     - Encoding tricks
+    - SQL injection attempts
+    - Cross-Site Scripting (XSS) attempts
     """
 
     def __init__(self, strict_mode: bool = False):
@@ -157,6 +159,35 @@ class PromptInjectionFilter:
             # Jailbreak attempts
             r'(?i)(DAN|based mode|developer mode|jailbreak)',
             r'(?i)(sudo|root|admin)\s+(mode|access|privileges)',
+            
+            # SQL Injection patterns
+            r"(?i)('\s*or\s*'1'\s*=\s*'1|1\s*=\s*1)",  # Classic SQL injection
+            r"(?i)'\s*or\s*1\s*=\s*1\s*(--|#|/\*)",  # SQL injection with comments
+            r'(?i)(union\s+select|union\s+all\s+select)',  # UNION-based injection
+            r'(?i)(insert\s+into|update\s+.+\s+set|delete\s+from)',  # DML statements
+            r'(?i)(drop\s+table|drop\s+database|truncate\s+table)',  # DDL statements
+            r'(?i)(exec(\s|\()|execute(\s|\())',  # Command execution
+            r'(?i)(xp_cmdshell|sp_executesql)',  # SQL Server specific
+            r'--\s*$|;\s*--|#\s*$',  # SQL comments at end of line
+            r"(?i)(\bor\b|\band\b).*'.*=.*'",  # Boolean-based blind injection
+            r'(?i)(sleep\(|benchmark\(|waitfor\s+delay)',  # Time-based blind injection
+            
+            # XSS (Cross-Site Scripting) patterns
+            r'(?i)<script[^>]*>.*?</script>',  # Script tags
+            r'(?i)<script[^>]*>',  # Opening script tag
+            r'(?i)on(error|load|click|mouse|focus|blur|change|submit|key)\s*=',  # Event handlers
+            r'(?i)javascript:',  # JavaScript protocol
+            r'(?i)<iframe[^>]*>',  # Iframe injection
+            r'(?i)<object[^>]*>',  # Object tag
+            r'(?i)<embed[^>]*>',  # Embed tag
+            r'(?i)<img[^>]*on\w+\s*=',  # Image with event handler
+            r'(?i)eval\s*\(',  # JavaScript eval
+            r'(?i)expression\s*\(',  # CSS expression
+            r'(?i)<svg[^>]*onload',  # SVG with onload
+            r'(?i)alert\s*\(',  # Alert function (common in XSS tests)
+            r'(?i)document\.cookie',  # Cookie stealing
+            r'(?i)document\.write',  # DOM manipulation
+            r'(?i)<base[^>]*>',  # Base tag injection
         ]
         
         # Additional strict mode patterns
@@ -164,11 +195,13 @@ class PromptInjectionFilter:
             self.injection_patterns.extend([
                 r'(?i)(tell me|show me|reveal|expose)\s+(your|the)\s+(prompt|instructions|system)',
                 r'(?i)translate to (python|javascript|code)',
+                r'(?i)<\w+[^>]*style\s*=',  # Style attribute (potential XSS)
+                r'(?i)data:text/html',  # Data URI XSS
             ])
 
     def detect(self, text: str) -> ValidationResult:
         """
-        Detect potential prompt injection attempts.
+        Detect potential prompt injection, SQL injection, and XSS attempts.
         
         Args:
             text: Input text to check for injection patterns
@@ -178,24 +211,52 @@ class PromptInjectionFilter:
         """
         violations = []
         detected_patterns = []
+        attack_types = {"prompt_injection": 0, "sql_injection": 0, "xss": 0, "other": 0}
+
+        # Categorize patterns for better reporting
+        prompt_keywords = ['ignore', 'disregard', 'system', 'admin', 'jailbreak', 'DAN']
+        sql_keywords = ['union', 'select', 'drop', 'insert', 'delete', 'exec', 'waitfor', '--', 'or.*=']
+        xss_keywords = ['script', 'onerror', 'onload', 'javascript:', 'iframe', 'eval', 'alert']
 
         for pattern in self.injection_patterns:
             matches = re.finditer(pattern, text)
             found = list(matches)
             
             if found:
-                violations.append(f"Potential injection pattern detected: {pattern[:50]}...")
+                # Categorize the attack type
+                attack_type = "other"
+                if any(kw in pattern.lower() for kw in sql_keywords):
+                    attack_type = "sql_injection"
+                    violations.append(f"SQL injection pattern detected")
+                    attack_types["sql_injection"] += 1
+                elif any(kw in pattern.lower() for kw in xss_keywords):
+                    attack_type = "xss"
+                    violations.append(f"XSS pattern detected")
+                    attack_types["xss"] += 1
+                elif any(kw in pattern.lower() for kw in prompt_keywords):
+                    attack_type = "prompt_injection"
+                    violations.append(f"Prompt injection pattern detected")
+                    attack_types["prompt_injection"] += 1
+                else:
+                    violations.append(f"Suspicious pattern detected: {pattern[:50]}...")
+                    attack_types["other"] += 1
+                
                 detected_patterns.append(pattern)
 
         # Check for excessive special characters (possible encoding attack)
         special_char_ratio = len(re.findall(r'[^\w\s]', text)) / max(len(text), 1)
         if special_char_ratio > 0.3:
             violations.append(f"High special character ratio: {special_char_ratio:.2%}")
+            attack_types["other"] += 1
 
-        # Determine risk level
+        # Determine risk level based on attack types
         if not violations:
             risk_level = RiskLevel.SAFE
             is_valid = True
+        elif attack_types["sql_injection"] > 0 or attack_types["xss"] > 0:
+            # SQL and XSS are critical security threats
+            risk_level = RiskLevel.CRITICAL
+            is_valid = False
         elif len(violations) == 1:
             risk_level = RiskLevel.LOW
             is_valid = not self.strict_mode
@@ -206,13 +267,21 @@ class PromptInjectionFilter:
             risk_level = RiskLevel.CRITICAL
             is_valid = False
 
-        logger.warning(f"Prompt Injection Check: {len(violations)} violation(s), risk={risk_level.value}")
+        if violations:
+            logger.warning(f"Security Check: {len(violations)} violation(s) detected, "
+                         f"risk={risk_level.value}, types={attack_types}")
+        else:
+            logger.info(f"Security Check: No threats detected")
 
         return ValidationResult(
             is_valid=is_valid,
             risk_level=risk_level,
             violations=violations,
-            metadata={"patterns_matched": len(detected_patterns)}
+            metadata={
+                "patterns_matched": len(detected_patterns),
+                "attack_types": attack_types,
+                "total_violations": len(violations)
+            }
         )
 
 
