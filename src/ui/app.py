@@ -1,16 +1,3 @@
-<<<<<<< HEAD
-import streamlit as st
-import requests
-import pandas as pd
-import fitz
-import docx
-import os
-import time
-
-API_BASE = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
-MATCH_ENDPOINT = f"{API_BASE}/match_resume"
-
-=======
 import os
 import time
 
@@ -24,7 +11,7 @@ API_BASE = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 MATCH_ENDPOINT = f"{API_BASE}/match_resume"
 
 
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
+
 def analyze_resume_with_retry(payload, max_retries=5, delay=2, timeout=30):
     for attempt in range(max_retries):
         try:
@@ -39,15 +26,11 @@ def analyze_resume_with_retry(payload, max_retries=5, delay=2, timeout=30):
             time.sleep(delay)
     return False, None, "Backend service not responding"
 
-<<<<<<< HEAD
-st.set_page_config(page_title="Smart Resume Screener UI", page_icon="📄", layout="wide")
-
-=======
 
 st.set_page_config(page_title="Smart Resume Screener UI", page_icon="📄", layout="wide")
 
 
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
+
 def extract_text_from_file(uploaded_file):
     try:
         if uploaded_file.name.endswith(".pdf"):
@@ -62,7 +45,7 @@ def extract_text_from_file(uploaded_file):
         st.error(f"Error reading file: {e}")
         return None
 
-<<<<<<< HEAD
+
 st.title("📄 Smart Resume Screener")
 
 # Try multiple possible paths for the job descriptions file
@@ -91,17 +74,6 @@ try:
     job_titles = df_jobs["Job Title"].tolist()
 except KeyError as e:
     st.error(f"CSV file missing required column: {e}")
-=======
-
-st.title("📄 Smart Resume Screener")
-
-try:
-    df_jobs = pd.read_csv("notebooks/job_title_des.csv")
-    job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
-    job_titles = df_jobs["Job Title"].tolist()
-except FileNotFoundError:
-    st.error("job_title_des.csv not found in notebooks/")
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
     st.stop()
 
 st.subheader("Provide Your Resume")
@@ -130,13 +102,6 @@ if st.button("Find Best Matching Jobs"):
             success, result, error_msg = analyze_resume_with_retry(payload)
             if success:
                 matches = result["matches"]
-<<<<<<< HEAD
-                results_df = pd.DataFrame([{
-                    "Job Title": m["job_title"],
-                    "Rank": m["rank"],
-                    "Similarity Score": m["similarity_score"]
-                } for m in matches])
-=======
                 results_df = pd.DataFrame(
                     [
                         {
@@ -147,7 +112,6 @@ if st.button("Find Best Matching Jobs"):
                         for m in matches
                     ]
                 )
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
                 status_placeholder.empty()
                 with results_placeholder:
                     st.success("✅ Analysis complete!")
@@ -158,15 +122,6 @@ if st.button("Find Best Matching Jobs"):
                             with st.container():
                                 st.markdown("---")
                                 st.markdown(f"### #{row['Rank']} - {row['Job Title']}")
-<<<<<<< HEAD
-                                c1, c2 = st.columns([3,1])
-                                with c1:
-                                    st.progress(row['Similarity Score'])
-                                with c2:
-                                    st.markdown(f"**Match:** `{row['Similarity Score']:.2%}`")
-                                with st.expander("🔍 View Job Description"):
-                                    st.markdown(job_descriptions_dict.get(row['Job Title'], "Not available"))
-=======
                                 c1, c2 = st.columns([3, 1])
                                 with c1:
                                     st.progress(row["Similarity Score"])
@@ -180,7 +135,6 @@ if st.button("Find Best Matching Jobs"):
                                             row["Job Title"], "Not available"
                                         )
                                     )
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
             else:
                 with status_placeholder:
                     st.error(f"❌ {error_msg}")

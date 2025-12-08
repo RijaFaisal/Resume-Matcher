@@ -16,6 +16,22 @@ services:
       - API_URL=http://resume_matcher_api:8000/match_resume
     volumes:
       - ./data:/app/data
+      - ./models:/app/models
+      - ./evidently_workspace:/app/evidently_workspace
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend   # new backend Dockerfile (see below)
+    container_name: resume_backend
+    ports:
+      - "8000:8000"
+    environment:
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    volumes:
+      - ./models:/app/models
+      - ./mlruns:/app/mlruns
+
     networks:
       - mlops_network
     restart: unless-stopped
@@ -24,6 +40,8 @@ services:
 
   # MLflow Tracking Server: Logs experiments, models, and artifacts.
   mlflow:
+    image: python:3.11-slim
+    container_name: resume_mlflow
     image: ghcr.io/mlflow/mlflow:latest
     container_name: mlflow_server
     ports:
@@ -107,7 +125,6 @@ services:
       # Pass AWS credentials and MLflow URI from .env file to the container
       - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
       - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-<<<<<<< HEAD
       - MLFLOW_TRACKING_URI=http://mlflow:5000
     networks:
       - mlops_network
@@ -120,89 +137,6 @@ services:
       timeout: 10s
       retries: 3
       start_period: 40s
-
-  # Evidently AI Monitoring UI
-  evidently:
-    build:
-      context: ./monitoring/evidently
-      dockerfile: Dockerfile
-    container_name: evidently_ui
-    ports:
-      - "7000:7000"
-    volumes:
-      - ./monitoring/evidently/workspace:/app/workspace
-      - ./monitoring/evidently/reports:/app/reports
-    networks:
-      - mlops_network
-    restart: unless-stopped
-
-# Shared network for all services to communicate with each other
-networks:
-  mlops_network: # <-- Renamed for generic MLOps context
-    driver: bridge
-
-# Named volumes for persistent data storage
-volumes:
-  prometheus-data:
-  grafana-data:
-services:
-
-  frontend:
-    build:
-      context: .
-      dockerfile: Dockerfile   # your sahil Dockerfile (Streamlit)
-    container_name: resume_frontend
-    ports:
-      - "8501:8501"
-    environment:
-      - BACKEND_URL=http://backend:8000
-=======
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-    networks:
-      - mlops_network
-    restart: unless-stopped
-    depends_on:
-      - backend
-      - mlflow
-<<<<<<< HEAD
-    volumes:
-      - ./data:/app/data
-      - ./models:/app/models
-      - ./evidently_workspace:/app/evidently_workspace
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend   # new backend Dockerfile (see below)
-    container_name: resume_backend
-    ports:
-      - "8000:8000"
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-    volumes:
-      - ./models:/app/models
-      - ./mlruns:/app/mlruns
-
-  mlflow:
-    image: python:3.11-slim
-    container_name: resume_mlflow
-    ports:
-      - "5000:5000"
-    command: >
-      sh -c "pip install mlflow && 
-             mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlartifacts --host 0.0.0.0 --port 5000"
-    volumes:
-      - ./mlruns:/mlruns
-      - ./mlartifacts:/mlartifacts
-=======
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 
   # Evidently AI Monitoring UI
   evidently:
