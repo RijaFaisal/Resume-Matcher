@@ -52,7 +52,7 @@ jobs:
         run: black --check src tests || true
 
       - name: Run tests with coverage
-        run: pytest --cov=src --cov-fail-under=70 || true
+        run: pytest --cov=src --cov-fail-under=70
 
       - name: Login to GHCR
         run: |
@@ -62,20 +62,20 @@ jobs:
       - name: Build & Push Backend
         run: |
           IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }} -f Dockerfile . || true
-          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }} || true
+          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }} -f Dockerfile .
+          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-backend:${{ github.sha }}
 
       - name: Build & Push Frontend
         run: |
           IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui || true
-          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }} || true
+          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }} -f src/ui/Dockerfile src/ui
+          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-frontend:${{ github.sha }}
 
       - name: Build & Push Evidently
         run: |
           IMAGE_OWNER=$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')
-          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently || true
-          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }} || true
+          docker build -t ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }} -f monitoring/evidently/Dockerfile monitoring/evidently
+          docker push ghcr.io/$IMAGE_OWNER/resume-matcher-evidently:${{ github.sha }}
 
       - name: Canary Deploy backend
         run: |
@@ -91,7 +91,7 @@ jobs:
             status=$(curl -o /dev/null -s -w "%{http_code}" $url)
             if [ "$status" -ne 200 ]; then
               echo "❌ $url failed ($status)"
-              # exit 1 
+              exit 1
             fi
           done
           echo "✅ Canary deployment healthy!"
