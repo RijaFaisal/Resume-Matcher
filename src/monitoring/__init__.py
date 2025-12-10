@@ -1,5 +1,6 @@
 from .llm_metrics import (
     LLMMetricsTracker,
+    LLMMetrics,
     TokenCounter,
     CostCalculator,
     LatencyTracker,
@@ -18,4 +19,5 @@ __all__ = [
     "get_prometheus_metrics",
     "EvidentlyMonitor",
     "get_evidently_monitor",
+    "LLMMetrics",
 ]

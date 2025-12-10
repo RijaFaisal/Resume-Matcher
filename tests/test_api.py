@@ -1,7 +1,7 @@
 import pytest
 
 
-<<<<<<< HEAD
+
 class TestAPI:
     """Test class for API endpoints."""
     
@@ -200,17 +200,11 @@ class TestAPI:
         assert "Internal server error" in response.json()["detail"]
 import pytest
 
-=======
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 @pytest.mark.parametrize("endpoint", ["/", "/health"])
 def test_get_endpoints(client, endpoint):
     resp = client.get(endpoint)
     assert resp.status_code == 200
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 def test_match_resume_endpoint(client):
     payload = {
         "resume_text": "Experienced data scientist with Python, ML, and SQL expertise. Looking for new challenges.",
@@ -223,19 +217,12 @@ def test_match_resume_endpoint(client):
     assert len(data["matches"]) == 2
     assert "model_info" in data
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 def test_model_info_endpoint(client):
     resp = client.get("/model/info")
     assert resp.status_code in (200, 503)
 
-<<<<<<< HEAD
-=======
-
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 def test_metrics_endpoint(client):
     resp = client.get("/metrics")
     assert resp.status_code == 200
     assert b"matching_requests_total" in resp.content
+```

@@ -1,9 +1,9 @@
-from src.api.main import MatchRequest, MatchResponse, match_resume
+from src.api.app import MatchRequest, MatchResponse, match_resume
 
 SAMPLE_RESUME = "Experienced data scientist with Python, ML, and SQL expertise. Looking for new challenges."
 
 
-<<<<<<< HEAD
+
 class TestResumeMatcher:
     """Test class for ResumeMatcher model."""
     
@@ -201,24 +201,5 @@ class TestResumeMatcher:
         assert hasattr(self.matcher, 'is_trained')
         assert hasattr(self.matcher, 'vectorizer')
         assert hasattr(self.matcher, 'classifier')
-from src.api.main import MatchRequest, match_resume, MatchResponse
-
-SAMPLE_RESUME = "Experienced data scientist with Python, ML, and SQL expertise. Looking for new challenges."
-
-def test_match_resume_logic():
-    class DummyRequest:
-        app = type("App", (), {"state": match_resume.__globals__["app"].state})()
-=======
-def test_match_resume_logic():
-    class DummyRequest:
-        app = type("App", (), {"state": match_resume.__globals__["app"].state})()
-
->>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
-    req = MatchRequest(resume_text=SAMPLE_RESUME, top_n=2)
-    response = match_resume(req, DummyRequest())
-    assert isinstance(response, MatchResponse)
-    assert len(response.matches) == 2
-    for m in response.matches:
-        assert hasattr(m, "rank")
-        assert hasattr(m, "job_title")
-        assert hasattr(m, "similarity_score")
+        assert hasattr(self.matcher, 'vectorizer')
+        assert hasattr(self.matcher, 'classifier')

@@ -64,7 +64,9 @@ CONFIG = AppConfig()
 # Initialize Groq Client
 if not CONFIG.GROQ_API_KEY:
     logger.warning("⚠️ GROQ_API_KEY is missing! Chatbot validation will fail.")
-client = Groq(api_key=CONFIG.GROQ_API_KEY)
+    client = None
+else:
+    client = Groq(api_key=CONFIG.GROQ_API_KEY)
 
 # ===============================
 #  GLOBAL STATE
@@ -274,6 +276,9 @@ def generate_answer(context, query, user_context=None):
     prompt = get_chat_prompt(SYSTEM_ROLE, PROMPT_INSTRUCTION, context, user_context, query)
 
     try:
+        if not client:
+             return "I cannot answer this question because the LLM service is currently unavailable (API Key missing)."
+
         response = client.chat.completions.create(
             model=CONFIG.GROQ_MODEL,
             messages=[{"role": "user", "content": prompt}],

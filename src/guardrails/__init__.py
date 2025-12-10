@@ -2,6 +2,7 @@ from .input_validators import (
     PIIDetector,
     PromptInjectionFilter,
     InputValidator,
+    RiskLevel,
 )
 from .output_moderators import (
     ToxicityFilter,
@@ -20,4 +21,5 @@ __all__ = [
     "PolicyEngine",
     "GuardrailsConfig",
     "PolicyMode",
+    "RiskLevel",
 ]
