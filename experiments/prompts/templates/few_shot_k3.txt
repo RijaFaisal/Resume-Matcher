@@ -1,0 +1,20 @@
+System: You are a helpful assistant...
+User: Example 1:
+  Resume: <res1>
+  JD: <jd1>
+  Answer: Relevance: 90; Reason: strong skills match.
+---
+Example 2:
+  Resume: <res2>
+  JD: <jd2>
+  Answer: Relevance: 40; Reason: lacks required experience.
+---
+Example 3:
+  Resume: <res3>
+  JD: <jd3>
+  Answer: Relevance: 65; Reason: partial skill overlap.
+---
+Now evaluate:
+Resume: <<RESUME>>
+JD: <<JD>>
+Answer:

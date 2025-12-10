@@ -1,18 +1,31 @@
-FROM python:3.9-slim
+# ========================================
+# Dockerfile for Resume Matcher UI
+# Streamlit-based frontend with chatbot
+# ========================================
+
+FROM python:3.11-slim
 
 WORKDIR /app
 
+# Install system dependencies for health check
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
 # Copy requirements first for better caching
 COPY requirements.txt .
-RUN pip install -r requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the rest of the application
-COPY . .
+# Copy the application
+COPY app.py .
+COPY notebooks/ ./notebooks/
 
+# Expose Streamlit port
 EXPOSE 8501
 
-COPY notebooks/job_title_des.csv /app/notebooks/job_title_des.csv
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl --fail http://localhost:8501/_stcore/health || exit 1
 
-HEALTHCHECK CMD curl --fail http://localhost:8501/_stcore/health
-
+# Run Streamlit
 ENTRYPOINT ["streamlit", "run", "app.py", "--server.port=8501", "--server.address=0.0.0.0"]

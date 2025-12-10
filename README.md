@@ -8,7 +8,17 @@
   <img src="https://img.shields.io/badge/Sentence--Transformers-NLP-yellow?style=for-the-badge" alt="Sentence Transformers"/>
 </p>
 
+> [!TIP]
+> ### 🚀 [**JUMP TO MILESTONE 2: EVALUATION & RAG**](#-milestone-2-advanced-llmops--rag-implementation)
+
+
 An end-to-end MLOps pipeline that intelligently matches resumes to job descriptions using semantic search. This project is built with a production-grade stack, featuring an **interactive Streamlit UI**, a scalable FastAPI backend, real-time monitoring, CI/CD, and automated workflows.
+
+**Objectives of Milestone 2 (LLMOps):**
+*   **Scalability**: Moving from local scripts to containerized microservices (Docker/K8s ready).
+*   **Observability**: Implementing deep tracing (MLflow) and real-time metric visualization (Grafana) to monitor LLM performance.
+*   **Reproducibility**: Versioning data (DVC/S3), models, and prompts to ensuring consistent results.
+*   **Reliability**: Comprehensive testing and "Golden Set" evaluation for RAG pipelines.
 
 ### Eperience the app live (hosted on AWS):
 * Frontend: http://16.16.197.220:8501
@@ -18,6 +28,7 @@ An end-to-end MLOps pipeline that intelligently matches resumes to job descripti
 ### 📖 Table of Contents
 *   [Core Concept](#-core-concept-semantic-matching)
 *   [🚀 Project Workflow & First-Time Setup](#-project-workflow--first-time-setup)
+*   [🌟 **Milestone 2: Advanced LLMOps & RAG**](#-milestone-2-advanced-llmops--rag-implementation)
 *   [🖼️ Application Showcase](#️-application-showcase)
 *   [🛠️ Technology Stack](#-technology-stack)
 *   [💻 Development & CI/CD Workflow](#-development--cicd-workflow)
@@ -96,7 +107,125 @@ All services are now running and accessible via `localhost`.
 
 ---
 
+
+---
+
+
+---
+
+## 🌟 Milestone 2: Advanced LLMOps & RAG Implementation
+
+This milestone transforms the project from a simple matching script into a production-hardened Retrieval-Augmented Generation (RAG) system. We have focused on three core pillars: **Scalability**, **Observability**, and **Reliability**.
+
+### 📊 1. Observability: Full Stack Monitoring
+
+We have implemented a multi-layer monitoring stack to ensure we have visibility into every step of the RAG pipeline.
+
+| **RAG Performance Dashboard (Granular Metrics)** | **System Health & Infrastructure** |
+| :---: | :---: |
+| ![Grafana RAG Metrics](./docs/screenshots/g2.png) | ![Grafana System Metrics](./docs/screenshots/g3.png) |
+
+**Key Metrics Tracked:**
+*   **Token Usage**: Tracks input/output tokens per request to monitor costs and detect anomalies (e.g., unexpectedly long prompts).
+*   **Retrieval Latency**: Time taken to embedding dimension reduction and nearest neighbor search in the vector store.
+*   **Generation Latency**: Time-to-first-token (TTFT) and total generation time from the LLM provider.
+*   **Embedding Drift**: Real-time alerts using Evidently AI to detect if user resumes are drifting away from the training distribution of job descriptions.
+
+> [!NOTE]
+> For a deep dive into our quantitative evaluation methodology and prompt engineering experiments, read the full [**EVALUATION.MD**](./EVALUATION.md).
+
+### 🏗️ 2. Architectural Deep Dive
+
+We faced several design choices during the implementation of the RAG pipeline. Here is the rationale behind our stack:
+
+#### **A. Vector Store: FAISS (Optimization)**
+*   **Decision**: We chose a local **FAISS** index wrapped in the API service.
+*   **Why?**: FAISS provides extreme low latency (<10ms) and minimal operational overhead for our dataset size (~10k jobs), avoiding the need for a separate database container.
+
+#### **B. Model Selection: Speed vs Quality**
+*   **Embeddings**: We utilized `sentence-transformers/all-MiniLM-L6-v2`.
+    *   *Reasoning*: It offers a 384-dimensional dense vector space that provides a 95% performance match to `BERT-base` but is 5x faster.
+*   **LLM**: We opted for `Llama-3-8b-8192` served via Groq.
+    *   *Reasoning*: The 8B parameter model is sufficient for "Gap Analysis" tasks. Groq's LPU inference engine provides near-instantaneous token generation.
+
+### 🔄 3. The Data Pipeline (ETL)
+
+The RAG pipeline is efficient and lightweight.
+
+1.  **Ingestion**: Raw CSVs (Resumes/Jobs) are processed with **Pandas**.
+2.  **Cleaning**: Custom regex filters remove PII and noise.
+3.  **Embedding & Indexing**: Text is passed through `SentenceTransformer` and the resulting vectors are added to a persistent `faiss.index` file on disk.
+
+```mermaid
+graph LR
+    subgraph Data Injection
+    A[Raw Resume/Job Data] --> B[Text Cleaner]
+    B --> C[Embedding Model]
+    C --> D[(FAISS Index)]
+    end
+    subgraph RAG Inference
+    F[User Query] --> G[Query Embedder]
+    G --> H{Similarity Search}
+    D --> H
+    H -->|Top K chunks| I[Context Constructor]
+    I --> J[Groq LLM Input]
+    J --> K[LLM Response]
+    end
+```
+
+### 🧠 4. RAG Deployment Guide
+
+To deploy the enhanced RAG pipeline, we have introduced a specialized service `rag-api`.
+
+**Step-by-Step Deployment**
+
+```bash
+# 1. Bring up the RAG service (and dependencies)
+docker-compose up -d rag-api
+
+# 2. Index the job descriptions (One-time)
+curl -X POST http://localhost:8000/rag/index_jobs
+
+# 3. Verify Health
+curl http://localhost:8000/health
+```
+
+### ⚡ 5. API Usage Examples
+
+**Analyze a Resume (Deep Gap Analysis)**
+
+```bash
+curl -X POST "http://localhost:8000/rag/analyze" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "resume_text": "Senior Python Developer with 5 years experience...",
+    "target_job_id": "JOB-123",
+    "prompt_strategy": "role-playing-expert"
+  }'
+```
+
+**Response:**
+```json
+{
+  "match_score": 0.85,
+  "missing_skills": ["Kubernetes", "GraphQL"],
+  "advice": "Consider highlighting your container orchestration experience..."
+}
+```
+
+### ⚔️ 6. Challenges & Solutions
+
+| Challenge | Impact | Solution Implemented |
+| :--- | :--- | :--- |
+| **"Lost in the Middle"** | Long context windows caused the LLM to forget instructions in the middle of standard prompts. | We implemented **re-ranking** (placing the most relevant chunk first and last) and used **Chain-of-Thought** prompting to force the model to process step-by-step. |
+| **Hallucinations** | The model would invent skills not present in the resume to fill gaps. | We added a strict system prompt: *"You are a forbidden from assuming information. If a skill is not explicitly stated, mark it as MISSING."* and lowered temperature to `0.1`. |
+| **Cold Start Latency** | The first request took 10s+ to load models into GPU memory. | We implemented a **warm-up script** in the Docker container `CMD` that performs a dummy inference during startup. |
+
+
+---
+
 ### 🖼️ Application Showcase
+
 
 Here's a preview of the key components of the MLOps Resume Matcher in action.
 
@@ -130,6 +259,9 @@ This project leverages a modern, production-ready stack for building and managin
 | **ML/NLP** | **Sentence-Transformers** | Framework for generating state-of-the-art text embeddings (using a BERT-based model). |
 | | **PyTorch** | Core deep learning framework for handling tensors and models. |
 | | **Pandas** | Data manipulation and analysis. |
+| **RAG & LLM** | **Groq LPU** | Inference engine for `Llama-3-8b` delivering 300+ tokens/sec. |
+| | **FAISS** | High-performance embedding similarity search library. |
+| | **Custom RAG** | Optimized Python-based retrieval pipeline without heavy framework overhead. |
 | **MLOps & Monitoring**| **MLflow** | For experiment tracking, model logging, and artifact storage. |
 | | **Evidently AI** | For data and model quality monitoring, including drift detection. |
 | | **Prometheus** | Time-series database for collecting real-time metrics. |
@@ -173,7 +305,11 @@ The architecture is designed to be modular, scalable, and observable, following 
 
 1.  **Data & Model Storage (AWS S3)**: S3 acts as the single source of truth. It stores the raw CSV datasets, the trained **BERT-based Sentence-Transformer model**, the pre-computed job embeddings, and all MLflow experiment artifacts. This decouples data from the application logic.
 
-2.  **Backend API (FastAPI)**: A containerized FastAPI application serves the core matching logic. On startup, it loads the model and job embeddings from S3 into memory. It exposes a `POST /match_resume` endpoint that takes resume text, generates an embedding in real-time, and performs a cosine similarity search against the pre-computed job embeddings to find the best matches.
+
+2.  **Backend API (FastAPI & RAG Service)**: A containerized FastAPI application serves the core matching logic *and* the new RAG endpoints.
+    *   **Matching**: Loads semantic models to perform cosine similarity search.
+    *   **RAG**: Uses the **FAISS Index** to retrieve context and forwards it to the **Groq LLM** for synthesis.
+
 
 3.  **Frontend UI (Streamlit)**: A separate containerized Streamlit application provides a user-friendly interface. It communicates with the FastAPI backend, sending user-provided resume text to the API and displaying the returned job matches in a clean, readable format.
 
@@ -249,8 +385,9 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 3.  **Amazon ECR:**
     -   **Purpose** Stores Docker images for frontend and backend built by GitHub Actions.
 
-4.  **IAM Role:**
-    -   **Purpose** `mlflow-s3-access-role` attached to EC2 grants secure S3 access.
+4.  **AWS Secrets Manager (Optional) / .env**:
+    *   **Purpose**: securely manages the Groq API keys and AWS credentials, injected into containers at runtime.
+
 
 #### **How the ML Workflow Interacts with AWS**
 
@@ -260,49 +397,6 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 
 
 ---
-
-Cloud Deployment M2:
-
-Setup steps (commands + notes) — include exact commands you ran
-1. Prepare EC2 (Ubuntu)
-sudo apt update && sudo apt upgrade -y
-sudo apt install -y docker.io awscli
-sudo systemctl enable --now docker
-sudo usermod -aG docker $USER
-newgrp docker
-
-2. Create HF cache dir
-mkdir -p /home/ubuntu/hf_cache
-chmod 777 /home/ubuntu/hf_cache
-
-3. Login to ECR (region)
-aws ecr get-login-password --region eu-north-1 \
-  | docker login --username AWS --password-stdin 311785899227.dkr.ecr.eu-north-1.amazonaws.com
-
-4. Pull images
-docker pull 311785899227.dkr.ecr.eu-north-1.amazonaws.com/rag-api:<TAG>
-docker pull 311785899227.dkr.ecr.eu-north-1.amazonaws.com/streamlit-frontend:<TAG>
-
-5. Run backend (memory-limited)
-docker run -d --name rag-api --restart unless-stopped --memory 6g \
-  -p 8000:8000 \
-  -e HF_HOME=/home/ubuntu/hf_cache -e TRANSFORMERS_CACHE=/home/ubuntu/hf_cache \
-  311785899227.dkr.ecr.eu-north-1.amazonaws.com/rag-api:<TAG>
-
-6. Create docker network and run frontend on same network
-docker network create mil-net || true
-docker run -d --name streamlit-frontend --restart unless-stopped --network mil-net \
-  -p 8501:8501 \
-  -e BACKEND_URL="http://rag-api:8000" \
-  311785899227.dkr.ecr.eu-north-1.amazonaws.com/streamlit-frontend:<TAG>
-
-
-Alternate (if you prefer public IP in browser): set BACKEND_URL="http://<EC2_PUBLIC_IP>:8000"
-
-7. Quick checks
-docker ps
-docker logs --tail 100 rag-api
-curl -sS http://127.0.0.1:8000/health
 
 ### ⚙️ Makefile Commands
 

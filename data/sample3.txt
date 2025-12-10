@@ -1,0 +1,35 @@
+Umar Hussain had always believed that curiosity was his greatest strength.** Even as a child, he would dismantle old radios, explore the circuitry inside, and try to understand the language of wires and sparks. So when he stepped through the gates of **IBA Karachi** as a Computer Science freshman, he felt as though he had finally arrived at the place where curiosity could evolve into creation.
+
+The first few weeks were overwhelming—algorithms, discrete structures, programming assignments that stretched late into the night. Many of his classmates complained about the workload, but Umar found a strange joy in it. Debugging lines of code felt to him like solving small mysteries, each bug a hidden clue waiting to be unraveled. He wasn’t the smartest in the room, but he was persistent—painfully so.
+
+One evening, after a particularly long Data Structures lab, Umar sat alone in the **Faysal Building courtyard**, watching students trickle out in groups. His close friend Hamza tossed his backpack beside him, sighing dramatically.
+
+“Bro, this course is going to end me,” Hamza groaned.
+
+“It won’t,” Umar replied with a small smile. “It’ll just rearrange your brain a bit.”
+
+Hamza laughed. “That’s the problem. My brain doesn’t want to be rearranged.”
+
+Umar did not say it, but he truly believed that IBA was shaping him for something bigger—something meaningful. He just didn’t know what that was yet.
+
+---
+
+Midway through his second year, Umar joined an IBA research lab focusing on **machine learning for social impact**. Under the guidance of Dr. Ayesha, he worked on a project analyzing anonymized data from local schools to identify students at risk of dropping out. For the first time, Umar saw how code could reach beyond screens and servers—how it could transform decisions, policies, and lives.
+
+One night, while running model evaluations, Umar discovered an anomaly. The data for one district behaved differently from the rest, skewing predictions significantly. Instead of brushing it off, he dug deeper. After hours of investigation, he realized the issue stemmed not from the model but from the data-collection process itself. It was a small discovery, but it meant the project would be more accurate and more helpful.
+
+Dr. Ayesha noticed.
+
+“You have an instinct for detail,” she said the next morning. “Not everyone takes initiative like this.”
+
+Umar felt a warmth spread through him—recognition was rare but deeply rewarding.
+
+---
+
+As semesters passed, Umar grew—not just as a programmer but as a person. He learned to collaborate, to accept that asking for help wasn’t weakness, to lead teams during hackathons, and even to mentor juniors who felt overwhelmed just as he once had.
+
+By his final year, Umar had built not only a strong academic record but also a reputation for being reliable, curious, and quietly brilliant. His capstone project—an AI-powered learning assistant for under-resourced students—won praise from faculty and visitors alike.
+
+The day before graduation, standing near the university lake, Umar looked at the campus glowing under the Karachi sun. He felt gratitude—toward the challenges, the mentors, the friendships, and the countless hours spent wrestling with code.
+
+He had arrived at IBA as a student of curiosity. He was leaving as a creator—with purpose, ambition, and a story just beginning.

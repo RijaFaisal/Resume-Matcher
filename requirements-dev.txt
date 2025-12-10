@@ -1,0 +1,7 @@
+streamlit
+fastapi
+uvicorn[standard]
+requests
+pandas
+PyPDF2
+python-docx

@@ -1,7 +1,7 @@
 # Makefile for the MLOps Resume Matching App
 
 # Use .PHONY to ensure these targets run even if files with the same name exist.
-.PHONY: help dev install test lint format docker run stop clean evidently audit security logs mlflow api
+.PHONY: help dev install test lint format docker run stop clean evidently audit security logs mlflow api test-guardrails test-monitoring rag monitoring-dashboard
 
 # Default target: show the help message.
 help:
@@ -16,6 +16,8 @@ help:
 	@echo "    make test       - Run pytest with coverage report"
 	@echo "    make lint       - Run ruff and black linters to check for issues"
 	@echo "    make format     - Automatically format code with black and ruff"
+	@echo "    make test-guardrails - Run guardrails tests"
+	@echo "    make test-monitoring - Run monitoring tests"
 	@echo ""
 	@echo "  Docker & Services:"
 	@echo "    make docker     - Build the 'resume-matcher-api' Docker image"
@@ -27,10 +29,13 @@ help:
 	@echo "    make mlflow     - Run the MLflow server locally (without Docker)"
 	@echo "    make api        - Run the FastAPI server locally with auto-reload (without Docker)"
 	@echo "    make evidently  - Start the Evidently dashboard for data drift monitoring"
+	@echo "    make rag        - Run full RAG pipeline end-to-end"
+	@echo ""
+	@echo "  Monitoring:"
+	@echo "    make monitoring-dashboard - Open Grafana monitoring dashboard"
 	@echo ""
 	@echo "  Security:"
 	@echo "    make audit      - Run pip-audit to scan dependencies for vulnerabilities"
-
 
 # Setup the development environment
 dev:
@@ -131,3 +136,32 @@ mlflow:
 api:
 	@echo "🚀 Starting local FastAPI server for the Resume Matcher..."
 	uvicorn src.api.main:app --reload --host 0.0.0.0 --port 8000
+
+# Run guardrails tests
+test-guardrails:
+	@echo "🛡️ Running guardrails tests..."
+	pytest tests/test_guardrails.py -v --cov=src.guardrails --cov-report=term --cov-report=html
+	@echo "✅ Guardrails tests complete."
+
+# Run monitoring tests
+test-monitoring:
+	@echo "📊 Running monitoring tests..."
+	pytest tests/test_monitoring.py -v --cov=src.monitoring --cov-report=term --cov-report=html
+	@echo "✅ Monitoring tests complete."
+
+# Run full RAG pipeline end-to-end
+rag:
+	@echo "🔄 Running RAG pipeline with guardrails and monitoring..."
+	@echo "Step 1: Ingesting documents into vector store..."
+	python -m src.api.ingest --data_dir ./data --index_dir ./vectorstore
+	@echo "✅ Ingestion complete."
+	@echo "Step 2: Starting RAG API server with guardrails and monitoring..."
+	uvicorn src.api.app:app --host 0.0.0.0 --port 8001
+
+# Open Grafana monitoring dashboard
+monitoring-dashboard:
+	@echo "📊 Opening monitoring dashboards..."
+	@echo "Grafana: http://localhost:3000"
+	@echo "Prometheus: http://localhost:9090"
+	@echo "API Metrics: http://localhost:8000/metrics"
+	@open "http://localhost:3000" || xdg-open "http://localhost:3000" || echo "Please open http://localhost:3000"

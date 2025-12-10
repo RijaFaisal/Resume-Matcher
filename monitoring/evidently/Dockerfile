@@ -13,3 +13,4 @@ RUN mkdir -p /app/workspace /app/reports
 EXPOSE 7000
 
 CMD ["evidently", "ui", "--workspace", "/app/workspace", "--port", "7000", "--host", "0.0.0.0"]
+CMD ["evidently", "ui", "--workspace", "/app/workspace", "--port", "7000", "--host", "0.0.0.0"]

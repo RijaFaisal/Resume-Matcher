@@ -1,31 +1,31 @@
 """
-FastAPI Application for the MLOps Resume Matching App
+FastAPI Application for the MLOps Resume Matching App with Guardrails
 """
-import logging
 import os
 import time
-from contextlib import asynccontextmanager
-from datetime import datetime
+import logging
 from io import BytesIO, StringIO
-from typing import Dict, List
+from typing import List, Dict
+from datetime import datetime
+from contextlib import asynccontextmanager
 
 import boto3
-import pandas as pd
 import torch
+import pandas as pd
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
-from prometheus_client import (CONTENT_TYPE_LATEST, REGISTRY, Counter, Gauge,
-                               Histogram, generate_latest)
 from pydantic import BaseModel, Field
+from prometheus_client import Counter, REGISTRY, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from fastapi.responses import Response
 from sentence_transformers import SentenceTransformer, util
+
+# Import guardrails
+from src.guardrails import PolicyEngine, GuardrailsConfig, PolicyMode
 
 # --- 1. Load environment ---
 load_dotenv()
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 logger = logging.getLogger(__name__)
 
 
@@ -48,14 +48,34 @@ state = {
     "job_embeddings": None,
     "df_job_description": None,
     "model_info": {"model_name": CONFIG.MODEL_NAME, "version": CONFIG.MODEL_VERSION},
+    "policy_engine": None,
 }
+
+
+# --- 3.5. Initialize Guardrails ---
+def init_guardrails():
+    """Initialize guardrails policy engine."""
+    guardrails_config = GuardrailsConfig(
+        mode=PolicyMode.BALANCED,
+        enable_pii_detection=True,
+        enable_injection_filter=True,
+        enable_toxicity_filter=False,  # Resume content may contain various terms
+        enable_hallucination_detector=False,  # Not applicable for resume matching
+        mask_pii=True,
+        strict_injection_filter=False,
+        max_input_length=100000,  # Resumes can be long
+        min_input_length=50,
+        log_violations=True,
+    )
+    state["policy_engine"] = PolicyEngine(guardrails_config)
+    logger.info("Guardrails policy engine initialized")
 
 
 def get_metric(metric_type, name, description, labels=None):
     """Return existing metric if already registered, else create a new one."""
     if name in REGISTRY._names_to_collectors:
         return REGISTRY._names_to_collectors[name]
-
+    
     if metric_type == "counter":
         return Counter(name, description, labels or [])
     elif metric_type == "histogram":
@@ -154,6 +174,10 @@ async def lifespan(app: FastAPI):
         load_duration = time.time() - start_time
         app.state.METRICS["load_time_seconds"].set(load_duration)
         logger.info(f"✅ Startup complete in {load_duration:.2f}s.")
+        
+        # Initialize guardrails
+        init_guardrails()
+        logger.info("✅ Guardrails initialized.")
 
     except Exception as e:
         app.state.METRICS["errors_total"].labels(error_type="model_loading").inc()
@@ -165,10 +189,10 @@ async def lifespan(app: FastAPI):
 
 # --- 5. FastAPI ---
 app = FastAPI(
-    title="Resume Matching API",
-    description="MLOps API for matching resumes.",
-    version="1.0.0",
-    lifespan=lifespan,
+    title="Resume Matching API with Guardrails",
+    description="MLOps API for matching resumes with comprehensive safety mechanisms.",
+    version="2.0.0",
+    lifespan=lifespan
 )
 
 app.add_middleware(
@@ -218,6 +242,15 @@ def health_check():
 
 @app.post("/match_resume", response_model=MatchResponse)
 def match_resume(request: MatchRequest, http_request: Request):
+    """
+    Resume matching endpoint with guardrails.
+    
+    Flow:
+    1. Validate input (PII detection, length checks)
+    2. Encode resume using SBERT
+    3. Calculate similarity scores
+    4. Return top N matches
+    """
     start_time = time.time()
     metrics = http_request.app.state.METRICS
     version_label = state["model_info"].get("version", "unknown")
@@ -229,13 +262,47 @@ def match_resume(request: MatchRequest, http_request: Request):
         raise HTTPException(status_code=503, detail="Model or embeddings not loaded")
 
     try:
-        resume_embedding = state["sbert_model"].encode(
-            request.resume_text, convert_to_tensor=True
-        )
+        # ========== STEP 1: INPUT VALIDATION WITH GUARDRAILS ==========
+        policy_engine = state.get("policy_engine")
+        
+        if policy_engine:
+            logger.info(f"Validating resume text ({len(request.resume_text)} chars)...")
+            input_validation = policy_engine.validate_input(request.resume_text)
+            
+            if not input_validation.allowed:
+                logger.warning(f"Resume input blocked: {input_validation.input_validation.violations}")
+                metrics["errors_total"].labels(error_type="input_validation_failed").inc()
+                raise HTTPException(
+                    status_code=400,
+                    detail={
+                        "error": "Resume validation failed",
+                        "violations": input_validation.input_validation.violations,
+                        "risk_level": input_validation.input_validation.risk_level.value,
+                        "message": "Please review your resume for sensitive information or formatting issues."
+                    }
+                )
+            
+            # Use sanitized input if PII was masked
+            validated_resume = input_validation.sanitized_input or request.resume_text
+            
+            # Log warnings if any
+            if input_validation.input_validation.violations:
+                logger.warning(
+                    f"Resume validation warnings: {input_validation.input_validation.violations}"
+                )
+        else:
+            validated_resume = request.resume_text
+            logger.warning("Guardrails not initialized - skipping validation")
+
+        # ========== STEP 2: ENCODE RESUME ==========
+        resume_embedding = state["sbert_model"].encode(validated_resume, convert_to_tensor=True)
+        
+        # ========== STEP 3: CALCULATE SIMILARITY ==========
         cos_scores = util.cos_sim(resume_embedding, state["job_embeddings"])[0]
         k = min(request.top_n, len(state["df_job_description"]))
         top_results = torch.topk(cos_scores, k=k)
 
+        # ========== STEP 4: PREPARE MATCHES ==========
         matches = [
             MatchResult(
                 rank=i + 1,
@@ -245,24 +312,19 @@ def match_resume(request: MatchRequest, http_request: Request):
             for i, (score, idx) in enumerate(zip(top_results[0], top_results[1]))
         ]
 
+        # Update metrics
         duration = time.time() - start_time
-        metrics["duration_seconds"].labels(model_version=version_label).observe(
-            duration
-        )
-        metrics["requests_total"].labels(
-            model_version=version_label, status="success"
-        ).inc()
+        metrics["duration_seconds"].labels(model_version=version_label).observe(duration)
+        metrics["requests_total"].labels(model_version=version_label, status="success").inc()
         if matches:
-            metrics["similarity_score"].labels(model_version=version_label).observe(
-                matches[0].similarity_score
-            )
+            metrics["similarity_score"].labels(model_version=version_label).observe(matches[0].similarity_score)
 
         return MatchResponse(matches=matches, model_info=state["model_info"])
 
+    except HTTPException:
+        raise
     except Exception as e:
-        metrics["requests_total"].labels(
-            model_version=version_label, status="error"
-        ).inc()
+        metrics["requests_total"].labels(model_version=version_label, status="error").inc()
         metrics["errors_total"].labels(error_type="matching_error").inc()
         logger.exception(f"Error during matching: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -286,7 +348,25 @@ def get_model_info():
         "total_jobs_indexed": len(state["df_job_description"])
         if state["df_job_description"] is not None
         else 0,
+        "guardrails_enabled": state["policy_engine"] is not None,
     }
+
+
+@app.get("/guardrails/metrics")
+def get_guardrails_metrics():
+    """Get guardrails metrics."""
+    if state["policy_engine"]:
+        return state["policy_engine"].get_metrics()
+    return {"error": "Guardrails not initialized"}
+
+
+@app.post("/guardrails/metrics/reset")
+def reset_guardrails_metrics():
+    """Reset guardrails metrics."""
+    if state["policy_engine"]:
+        state["policy_engine"].reset_metrics()
+        return {"message": "Guardrails metrics reset successfully"}
+    return {"error": "Guardrails not initialized"}
 
 
 # --- Middleware ---
@@ -307,5 +387,4 @@ async def add_metrics_middleware(request: Request, call_next):
 # --- Run locally ---
 if __name__ == "__main__":
     import uvicorn
-
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

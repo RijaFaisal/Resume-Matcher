@@ -1,5 +1,8 @@
 import time
+<<<<<<< HEAD
+=======
 
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
 import requests
 
 
@@ -16,3 +19,8 @@ def main(num_requests: int = 30, delay_seconds: float = 0.2) -> None:
 
 if __name__ == "__main__":
     main()
+<<<<<<< HEAD
+
+
+=======
+>>>>>>> ad96fb2ff61387c387f69110253228d7040afb5a
