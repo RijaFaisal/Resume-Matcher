@@ -20,7 +20,15 @@ def mock_dependencies():
         # Mock State
         mock_state["policy_engine"] = None # Disable guardrails for logic simplification
         mock_state["sbert_model"] = MagicMock()
+        import numpy as np
+        # Ensure encode returns a numpy array for astype
+        mock_state["sbert_model"].encode.return_value = np.array([0.1, 0.2])
+        
         mock_state["faiss_index"] = MagicMock()
+        # Ensure search returns (scores, ids) tuple
+        # ids must be valid indices for documents list (0)
+        mock_state["faiss_index"].search.return_value = (np.array([[0.9]]), np.array([[0]]))
+        
         mock_state["documents"] = ["Doc 1"]
         
         yield mock_groq, mock_state
