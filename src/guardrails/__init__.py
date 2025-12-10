@@ -8,6 +8,7 @@ from .output_moderators import (
     ToxicityFilter,
     HallucinationDetector,
     OutputModerator,
+    ModerationAction,
 )
 from .policy_engine import PolicyEngine, GuardrailsConfig, PolicyMode
 
@@ -22,4 +23,5 @@ __all__ = [
     "GuardrailsConfig",
     "PolicyMode",
     "RiskLevel",
+    "ModerationAction",
 ]
