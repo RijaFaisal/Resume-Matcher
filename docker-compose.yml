@@ -4,7 +4,9 @@ version: '3.8'
 # Defines the services for the API, experiment tracking, and monitoring.
 
 services:
-  # Streamlit UI for Resume Matching
+  # ========================================
+  # Streamlit UI for Resume Matching & Chatbot
+  # ========================================
   ui:
     build:
       context: ./src/ui
@@ -13,35 +15,64 @@ services:
     ports:
       - "8501:8501"
     environment:
-      - API_URL=http://resume_matcher_api:8000/match_resume
+      - API_URL=http://rag_api:8000
     volumes:
       - ./data:/app/data
-      - ./models:/app/models
-      - ./evidently_workspace:/app/evidently_workspace
-
-  backend:
-    build:
-      context: .
-      dockerfile: Dockerfile.backend   # new backend Dockerfile (see below)
-    container_name: resume_backend
-    ports:
-      - "8000:8000"
-    environment:
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-    volumes:
-      - ./models:/app/models
-      - ./mlruns:/app/mlruns
-
+      - ./job_title_des.csv:/app/job_title_des.csv
     networks:
       - mlops_network
     restart: unless-stopped
     depends_on:
-      - api
+      - rag_api
 
-  # MLflow Tracking Server: Logs experiments, models, and artifacts.
+  # ========================================
+  # RAG API (Chatbot Backend with Groq LLM)
+  # ========================================
+  rag_api:
+    build:
+      context: .
+      dockerfile: Dockerfile.rag
+    container_name: rag_api
+    ports:
+      - "8000:8000"
+    environment:
+      - GROQ_API_KEY=${GROQ_API_KEY}
+    volumes:
+      - ./vectorstore:/app/vectorstore
+    networks:
+      - mlops_network
+    restart: unless-stopped
+
+  # ========================================
+  # Resume Matching API (SBERT-based)
+  # ========================================
+  resume_api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: resume_matcher_api
+    ports:
+      - "8001:8000"
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MLFLOW_TRACKING_URI=http://mlflow:5000
+    networks:
+      - mlops_network
+    restart: unless-stopped
+    depends_on:
+      - mlflow
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ========================================
+  # MLflow Tracking Server
+  # ========================================
   mlflow:
-    image: python:3.11-slim
-    container_name: resume_mlflow
     image: ghcr.io/mlflow/mlflow:latest
     container_name: mlflow_server
     ports:
@@ -59,7 +90,9 @@ services:
       - mlops_network
     restart: unless-stopped
 
-  # Prometheus: Collects time-series metrics from the API and other exporters.
+  # ========================================
+  # Prometheus: Metrics Collection
+  # ========================================
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
@@ -75,7 +108,9 @@ services:
       - mlops_network
     restart: unless-stopped
 
-  # Grafana: Visualizes metrics collected by Prometheus in dashboards.
+  # ========================================
+  # Grafana: Metrics Visualization
+  # ========================================
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -95,7 +130,9 @@ services:
     depends_on:
       - prometheus
 
-  # Node Exporter: Provides system-level metrics (CPU, Memory, Disk) for Prometheus.
+  # ========================================
+  # Node Exporter: System Metrics
+  # ========================================
   node-exporter:
     image: prom/node-exporter:latest
     container_name: node_exporter
@@ -113,35 +150,10 @@ services:
       - mlops_network
     restart: unless-stopped
 
-    # FastAPI Application for Resume Matching
-  api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: resume_matcher_api
-    ports:
-      - "8000:8000"
-    environment:
-      # Pass AWS credentials and MLflow URI from .env file to the container
-      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
-      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
-      - MLFLOW_TRACKING_URI=http://mlflow:5000
-    networks:
-      - mlops_network
-    restart: unless-stopped
-    depends_on:
-      - mlflow
-    healthcheck:
-      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:8000/health')"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  # Evidently AI Monitoring UI
+  # ========================================
+  # Evidently AI Monitoring
+  # ========================================
   evidently:
-    image: python:3.11-slim
-    container_name: resume_evidently
     build:
       context: ./monitoring/evidently
       dockerfile: Dockerfile
@@ -155,12 +167,16 @@ services:
       - mlops_network
     restart: unless-stopped
 
-# Shared network for all services to communicate with each other
+# ========================================
+# Shared Network
+# ========================================
 networks:
-  mlops_network: # <-- Renamed for generic MLOps context
+  mlops_network:
     driver: bridge
 
-# Named volumes for persistent data storage
+# ========================================
+# Persistent Volumes
+# ========================================
 volumes:
   prometheus-data:
   grafana-data:
