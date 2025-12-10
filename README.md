@@ -25,8 +25,8 @@ An end-to-end MLOps pipeline that intelligently matches resumes to job descripti
 * Backend: http://16.16.197.220:8000/docs
 
 ### Milestone 2(hosted on AWS):
-* Frontend: http://35.172.217.244:8501/
-* Backend: http://35.172.217.244:8000/docs
+* Frontend: http://100.31.37.13:8501
+* Backend: http://100.31.37.13:8000/docs
 ---
 
 ### 📖 Table of Contents
