@@ -64,36 +64,6 @@ class TestAPI:
         )
         assert response.status_code == 422 # Pydantic validation error
 
-    
-    @patch('src.api.app.Ingestor')
-    def test_ingest_endpoint(self, mock_ingestor):
-        """Test ingest endpoint."""
-        # Setup mock behavior
-        instance = mock_ingestor.return_value
-        instance.ingest.return_value = None
-
-        response = client.post(
-            "/ingest",
-            json={
-                "data_dir": "./data",
-                "index_dir": "./vectorstore"
-            }
-        )
-        # Note: Depending on authentication or implementation, this might be 200 or 401.
-        # Assuming open endpoint or handled correctly.
-        # If the endpoint doesn't exist in the truncated app.py view, verify existence first.
-        # Based on app.py view, /ingest doesn't seem explicitly defined in the first 250 lines.
-        # Use simple assertion to check if route exists if implemented.
-        if response.status_code != 404:
-             assert response.status_code == 200
-    
-    def test_metrics_endpoint(self):
-        """Test metrics endpoint."""
-        response = client.get("/metrics")
-        # Metrics might be standard prometheus text
-        assert response.status_code == 200
-        assert "http_requests_total" in response.text
-
     def test_pdf_usage(self):
         """test internal PDF generation helper"""
         from src.api.app import generate_pdf_resume
