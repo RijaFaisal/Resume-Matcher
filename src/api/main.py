@@ -1,6 +1,7 @@
 """
 FastAPI Application for the MLOps Resume Matching App with Guardrails
 """
+
 import os
 import time
 import logging
@@ -16,7 +17,14 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from prometheus_client import Counter, REGISTRY, Histogram, Gauge, generate_latest, CONTENT_TYPE_LATEST
+from prometheus_client import (
+    Counter,
+    REGISTRY,
+    Histogram,
+    Gauge,
+    generate_latest,
+    CONTENT_TYPE_LATEST,
+)
 from fastapi.responses import Response
 from sentence_transformers import SentenceTransformer, util
 
@@ -25,7 +33,9 @@ from src.guardrails import PolicyEngine, GuardrailsConfig, PolicyMode
 
 # --- 1. Load environment ---
 load_dotenv()
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+)
 logger = logging.getLogger(__name__)
 
 
@@ -75,7 +85,7 @@ def get_metric(metric_type, name, description, labels=None):
     """Return existing metric if already registered, else create a new one."""
     if name in REGISTRY._names_to_collectors:
         return REGISTRY._names_to_collectors[name]
-    
+
     if metric_type == "counter":
         return Counter(name, description, labels or [])
     elif metric_type == "histogram":
@@ -174,7 +184,7 @@ async def lifespan(app: FastAPI):
         load_duration = time.time() - start_time
         app.state.METRICS["load_time_seconds"].set(load_duration)
         logger.info(f"✅ Startup complete in {load_duration:.2f}s.")
-        
+
         # Initialize guardrails
         init_guardrails()
         logger.info("✅ Guardrails initialized.")
@@ -192,7 +202,7 @@ app = FastAPI(
     title="Resume Matching API with Guardrails",
     description="MLOps API for matching resumes with comprehensive safety mechanisms.",
     version="2.0.0",
-    lifespan=lifespan
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -230,9 +240,11 @@ def root():
 @app.get("/health")
 def health_check():
     return {
-        "status": "healthy"
-        if state["sbert_model"] is not None and state["job_embeddings"] is not None
-        else "degraded",
+        "status": (
+            "healthy"
+            if state["sbert_model"] is not None and state["job_embeddings"] is not None
+            else "degraded"
+        ),
         "timestamp": datetime.now().isoformat(),
         "model_loaded": state["sbert_model"] is not None,
         "embeddings_loaded": state["job_embeddings"] is not None,
@@ -244,7 +256,7 @@ def health_check():
 def match_resume(request: MatchRequest, http_request: Request):
     """
     Resume matching endpoint with guardrails.
-    
+
     Flow:
     1. Validate input (PII detection, length checks)
     2. Encode resume using SBERT
@@ -264,27 +276,31 @@ def match_resume(request: MatchRequest, http_request: Request):
     try:
         # ========== STEP 1: INPUT VALIDATION WITH GUARDRAILS ==========
         policy_engine = state.get("policy_engine")
-        
+
         if policy_engine:
             logger.info(f"Validating resume text ({len(request.resume_text)} chars)...")
             input_validation = policy_engine.validate_input(request.resume_text)
-            
+
             if not input_validation.allowed:
-                logger.warning(f"Resume input blocked: {input_validation.input_validation.violations}")
-                metrics["errors_total"].labels(error_type="input_validation_failed").inc()
+                logger.warning(
+                    f"Resume input blocked: {input_validation.input_validation.violations}"
+                )
+                metrics["errors_total"].labels(
+                    error_type="input_validation_failed"
+                ).inc()
                 raise HTTPException(
                     status_code=400,
                     detail={
                         "error": "Resume validation failed",
                         "violations": input_validation.input_validation.violations,
                         "risk_level": input_validation.input_validation.risk_level.value,
-                        "message": "Please review your resume for sensitive information or formatting issues."
-                    }
+                        "message": "Please review your resume for sensitive information or formatting issues.",
+                    },
                 )
-            
+
             # Use sanitized input if PII was masked
             validated_resume = input_validation.sanitized_input or request.resume_text
-            
+
             # Log warnings if any
             if input_validation.input_validation.violations:
                 logger.warning(
@@ -295,8 +311,10 @@ def match_resume(request: MatchRequest, http_request: Request):
             logger.warning("Guardrails not initialized - skipping validation")
 
         # ========== STEP 2: ENCODE RESUME ==========
-        resume_embedding = state["sbert_model"].encode(validated_resume, convert_to_tensor=True)
-        
+        resume_embedding = state["sbert_model"].encode(
+            validated_resume, convert_to_tensor=True
+        )
+
         # ========== STEP 3: CALCULATE SIMILARITY ==========
         cos_scores = util.cos_sim(resume_embedding, state["job_embeddings"])[0]
         k = min(request.top_n, len(state["df_job_description"]))
@@ -314,17 +332,25 @@ def match_resume(request: MatchRequest, http_request: Request):
 
         # Update metrics
         duration = time.time() - start_time
-        metrics["duration_seconds"].labels(model_version=version_label).observe(duration)
-        metrics["requests_total"].labels(model_version=version_label, status="success").inc()
+        metrics["duration_seconds"].labels(model_version=version_label).observe(
+            duration
+        )
+        metrics["requests_total"].labels(
+            model_version=version_label, status="success"
+        ).inc()
         if matches:
-            metrics["similarity_score"].labels(model_version=version_label).observe(matches[0].similarity_score)
+            metrics["similarity_score"].labels(model_version=version_label).observe(
+                matches[0].similarity_score
+            )
 
         return MatchResponse(matches=matches, model_info=state["model_info"])
 
     except HTTPException:
         raise
     except Exception as e:
-        metrics["requests_total"].labels(model_version=version_label, status="error").inc()
+        metrics["requests_total"].labels(
+            model_version=version_label, status="error"
+        ).inc()
         metrics["errors_total"].labels(error_type="matching_error").inc()
         logger.exception(f"Error during matching: {e}")
         raise HTTPException(status_code=500, detail=str(e))
@@ -342,12 +368,16 @@ def get_model_info():
     return {
         "model_info": state["model_info"],
         "loaded": True,
-        "job_embeddings_shape": list(state["job_embeddings"].shape)
-        if state["job_embeddings"] is not None
-        else None,
-        "total_jobs_indexed": len(state["df_job_description"])
-        if state["df_job_description"] is not None
-        else 0,
+        "job_embeddings_shape": (
+            list(state["job_embeddings"].shape)
+            if state["job_embeddings"] is not None
+            else None
+        ),
+        "total_jobs_indexed": (
+            len(state["df_job_description"])
+            if state["df_job_description"] is not None
+            else 0
+        ),
         "guardrails_enabled": state["policy_engine"] is not None,
     }
 
@@ -387,4 +417,5 @@ async def add_metrics_middleware(request: Request, call_next):
 # --- Run locally ---
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

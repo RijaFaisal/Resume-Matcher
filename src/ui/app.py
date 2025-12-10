@@ -23,11 +23,13 @@ API_BASE = os.getenv("API_URL", "http://localhost:8000").rstrip("/")
 MATCH_ENDPOINT = f"{API_BASE}/match_resume"
 CHAT_ENDPOINT = f"{API_BASE}/ask"
 
+
 # ========================================
 # CUSTOM CSS - Modern Dark Glassmorphism Theme
 # ========================================
 def inject_custom_css():
-    st.markdown("""
+    st.markdown(
+        """
     <style>
     /* Import Google Fonts */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
@@ -335,7 +337,9 @@ def inject_custom_css():
         50% { transform: scale(1.2); opacity: 1; }
     }
     </style>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # ========================================
@@ -403,7 +407,7 @@ def load_job_descriptions():
         "notebooks/job_title_des.csv",
         "src/ui/notebooks/job_title_des.csv",
     ]
-    
+
     df_jobs = None
     for path in job_file_paths:
         try:
@@ -412,7 +416,7 @@ def load_job_descriptions():
                 break
         except Exception:
             continue
-    
+
     return df_jobs
 
 
@@ -421,7 +425,8 @@ def load_job_descriptions():
 # ========================================
 def render_header():
     """Render the main header"""
-    st.markdown("""
+    st.markdown(
+        """
     <div style="text-align: center; margin-bottom: 2rem;">
         <h1 style="font-size: 2.5rem; margin-bottom: 0.5rem;">
             ✨ Resume Matcher & AI Assistant
@@ -430,45 +435,51 @@ def render_header():
             Upload your resume, find matching jobs, and chat with our AI about career advice
         </p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 def render_sidebar():
     """Render the sidebar navigation"""
     with st.sidebar:
         st.markdown('<div class="brand-logo">🚀 ResumeAI</div>', unsafe_allow_html=True)
-        
+
         # Navigation
         st.markdown("### Navigation")
         page = st.radio(
             "Choose a feature:",
             ["📄 Resume Matcher", "💬 AI Chatbot", "ℹ️ About"],
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
-        
+
         st.markdown("---")
-        
+
         # Resume Upload (shared between features)
         st.markdown("### 📎 Your Resume")
         uploaded_file = st.file_uploader(
             "Upload resume (PDF, DOCX, TXT)",
             type=["txt", "pdf", "docx"],
-            key="resume_upload"
+            key="resume_upload",
         )
-        
+
         if uploaded_file:
             resume_text = extract_text_from_file(uploaded_file)
             if resume_text:
                 st.session_state.resume_text = resume_text
                 st.success(f"✅ Loaded: {uploaded_file.name}")
                 with st.expander("Preview"):
-                    st.text(resume_text[:500] + "..." if len(resume_text) > 500 else resume_text)
-        
+                    st.text(
+                        resume_text[:500] + "..."
+                        if len(resume_text) > 500
+                        else resume_text
+                    )
+
         st.markdown("---")
-        
+
         # Status indicators
         st.markdown("### 🔌 System Status")
-        
+
         # Check API health
         try:
             health = requests.get(f"{API_BASE}/health", timeout=5)
@@ -478,13 +489,13 @@ def render_sidebar():
                 st.warning("API: Degraded")
         except:
             st.error("API: Offline")
-        
+
         return page
 
 
 def render_resume_matcher():
     """Render the Resume Matcher page"""
-    
+
     # Hero / Upload Section
     st.markdown("## 🎯 Find Your Perfect Job Match")
     st.markdown("Upload your resume and discover the best matching job opportunities.")
@@ -496,61 +507,65 @@ def render_resume_matcher():
             "Upload your resume (PDF, DOCX, TXT)",
             type=["txt", "pdf", "docx"],
             key="resume_upload_main",
-            label_visibility="collapsed"
+            label_visibility="collapsed",
         )
-        
+
         if uploaded_file:
             resume_text = extract_text_from_file(uploaded_file)
             if resume_text:
                 st.session_state.resume_text = resume_text
                 st.success(f"✅ Loaded: {uploaded_file.name}")
-        
-        st.markdown('</div>', unsafe_allow_html=True)
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Load job descriptions
     df_jobs = load_job_descriptions()
-    
+
     if df_jobs is None:
         st.error("❌ Job database not found. Please ensure job_title_des.csv exists.")
         return
-    
+
     try:
-        job_descriptions_dict = dict(zip(df_jobs["Job Title"], df_jobs["Job Description"]))
+        job_descriptions_dict = dict(
+            zip(df_jobs["Job Title"], df_jobs["Job Description"])
+        )
     except KeyError as e:
-         st.error(f"CSV file missing required column: {e}")
-         return
-    
+        st.error(f"CSV file missing required column: {e}")
+        return
+
     # Input & Settings
     with st.container():
         st.markdown('<div class="glass-card">', unsafe_allow_html=True)
         col1, col2 = st.columns([3, 1])
-        
+
         with col1:
-             st.markdown("### 📝 Resume Content")
-             resume_text = st.session_state.get("resume_text", "")
-             resume_input = st.text_area(
+            st.markdown("### 📝 Resume Content")
+            resume_text = st.session_state.get("resume_text", "")
+            resume_input = st.text_area(
                 "Verify or edit your resume text:",
                 value=resume_text,
                 height=200,
                 placeholder="Content will appear here after upload...",
                 key="resume_matcher_input",
-                label_visibility="collapsed"
+                label_visibility="collapsed",
             )
 
         with col2:
             st.markdown("### ⚙️ Filters")
             top_n = st.slider("Max Matches", 1, 20, 5)
             st.caption(f"Searching {len(df_jobs)} jobs")
-            
-            st.markdown("---")
-            analyze_btn = st.button("🚀 Analyze", use_container_width=True, type="primary")
 
-        st.markdown('</div>', unsafe_allow_html=True)
+            st.markdown("---")
+            analyze_btn = st.button(
+                "🚀 Analyze", use_container_width=True, type="primary"
+            )
+
+        st.markdown("</div>", unsafe_allow_html=True)
 
     # Analysis & Results
     if analyze_btn:
         effective_resume = resume_input or resume_text
-        
+
         if not effective_resume.strip():
             st.warning("⚠️ Please provide your resume content first!")
             return
@@ -558,21 +573,24 @@ def render_resume_matcher():
         with st.spinner("🔍 Analyzing resume against job database..."):
             payload = {"resume_text": effective_resume, "top_n": top_n}
             success, result, error_msg = analyze_resume_with_retry(payload)
-            
+
             if success:
                 st.toast("Analysis complete!", icon="✅")
                 matches = result["matches"]
-                
+
                 st.markdown("### 📋 Top Matching Jobs")
-                
+
                 for match in matches:
                     score = match["similarity_score"]
                     score_class = get_score_class(score)
                     job_title = match["job_title"]
-                    desc = job_descriptions_dict.get(job_title, "No description available.")
-                    
+                    desc = job_descriptions_dict.get(
+                        job_title, "No description available."
+                    )
+
                     # Enhanced Card Layout
-                    st.markdown(f"""
+                    st.markdown(
+                        f"""
                     <div class="glass-card" style="border-left: 5px solid {
                         '#38ef7d' if score >= 0.7 else '#f5576c' if score >= 0.4 else '#4facfe'
                     };">
@@ -590,16 +608,21 @@ def render_resume_matcher():
                             </div>
                         </div>
                     </div>
-                    """, unsafe_allow_html=True)
-                    
+                    """,
+                        unsafe_allow_html=True,
+                    )
+
                     # Expandable details
                     with st.expander(f"View Details for {job_title}"):
                         st.markdown(f"**Relevance Score:** {score:.4f}")
                         st.markdown("#### Job Description")
                         st.write(desc)
-                        st.button(f"Chat about this job", key=f"chat_{match['rank']}", 
-                                  help="Ask the AI assistant specifically about this role (Coming Soon)")
-                    
+                        st.button(
+                            "Chat about this job",
+                            key=f"chat_{match['rank']}",
+                            help="Ask the AI assistant specifically about this role (Coming Soon)",
+                        )
+
             else:
                 st.error(f"❌ {error_msg}")
 
@@ -607,7 +630,7 @@ def render_resume_matcher():
 def render_chatbot():
     """Render the AI Chatbot page"""
     st.markdown("## 💬 AI Career Assistant")
-    
+
     # Initialize chat history
     if "chat_history" not in st.session_state:
         st.session_state.chat_history = []
@@ -616,16 +639,16 @@ def render_chatbot():
     for msg in st.session_state.chat_history:
         with st.chat_message(msg["role"]):
             st.markdown(msg["content"])
-            
+
             # Show guardrails info if available
             if "guardrails" in msg and msg["guardrails"]:
                 guardrails = msg["guardrails"]
-                input_validation = guardrails.get('input_validation') or {}
-                risk_level = input_validation.get('risk_level', 'N/A')
-                
-                if risk_level != 'N/A':
+                input_validation = guardrails.get("input_validation") or {}
+                risk_level = input_validation.get("risk_level", "N/A")
+
+                if risk_level != "N/A":
                     st.caption(f"🛡️ Guardrails: Risk level: {risk_level}")
-            
+
             # Show download button if PDF was generated
             if "generated_pdf" in msg and msg["generated_pdf"]:
                 pdf_data = base64.b64decode(msg["generated_pdf"])
@@ -634,35 +657,40 @@ def render_chatbot():
                     data=pdf_data,
                     file_name="Edited_Resume.pdf",
                     mime="application/pdf",
-                    key=f"dl_{st.session_state.chat_history.index(msg)}"
+                    key=f"dl_{st.session_state.chat_history.index(msg)}",
                 )
 
     # --- 2. GENERATE RESPONSE ---
     # Check if the last message is from the user (implies we need to respond)
-    if st.session_state.chat_history and st.session_state.chat_history[-1]["role"] == "user":
+    if (
+        st.session_state.chat_history
+        and st.session_state.chat_history[-1]["role"] == "user"
+    ):
         with st.chat_message("assistant"):
             with st.spinner("Thinking..."):
                 # Get context
                 resume_context = st.session_state.get("resume_text", "")
-                
+
                 last_msg_obj = st.session_state.chat_history[-1]
                 # Use hidden_content (with attachment) if available, else displayed content
                 query_text = last_msg_obj.get("hidden_content", last_msg_obj["content"])
-                
+
                 # Call API
-                success, response, error = send_chat_message(query_text, user_context=resume_context)
-                
+                success, response, error = send_chat_message(
+                    query_text, user_context=resume_context
+                )
+
                 if success:
                     answer = response.get("answer", "I couldn't generate a response.")
                     st.markdown(answer)
-                    
+
                     bot_message = {
                         "role": "assistant",
                         "content": answer,
                         "timestamp": datetime.now().isoformat(),
                         "guardrails": response.get("guardrails", {}),
                         "context": response.get("context_used", []),
-                        "generated_pdf": response.get("generated_pdf")
+                        "generated_pdf": response.get("generated_pdf"),
                     }
                 else:
                     error_msg = f"I'm sorry, I encountered an error: {error}. Please make sure the backend service is running."
@@ -670,12 +698,12 @@ def render_chatbot():
                     bot_message = {
                         "role": "assistant",
                         "content": error_msg,
-                        "timestamp": datetime.now().isoformat()
+                        "timestamp": datetime.now().isoformat(),
                     }
-                
+
                 # Add to history
                 st.session_state.chat_history.append(bot_message)
-                
+
         # Rerun to update the UI with the final message
         st.rerun()
 
@@ -684,19 +712,25 @@ def render_chatbot():
     attachment_text = ""
     with st.popover("📎 Attach Document", use_container_width=False):
         st.markdown("### Upload Document")
-        chat_file = st.file_uploader("Upload PDF/DOCX/TXT", type=["pdf", "docx", "txt"], key="chat_attachment")
+        chat_file = st.file_uploader(
+            "Upload PDF/DOCX/TXT", type=["pdf", "docx", "txt"], key="chat_attachment"
+        )
         if chat_file:
             with st.spinner("Processing attachment..."):
                 extracted = extract_text_from_file(chat_file)
                 if extracted:
                     attachment_text = f"\n\n[Attached Document Context]:\n{extracted}\n"
-                    st.success("✅ File attached! It will be sent with your next message.")
+                    st.success(
+                        "✅ File attached! It will be sent with your next message."
+                    )
                 else:
                     st.error("❌ Failed to read file.")
 
     # Chat Input (Always visible, pinned to bottom)
-    user_input = st.chat_input("Ask me about job requirements, resume tips, career advice...")
-    
+    user_input = st.chat_input(
+        "Ask me about job requirements, resume tips, career advice..."
+    )
+
     # Handle Quick Questions (only if history is empty)
     selected_question = None
     if not st.session_state.chat_history:
@@ -705,7 +739,7 @@ def render_chatbot():
         questions = [
             "What skills do Data Scientists need?",
             "How to improve my resume?",
-            "Common interview questions"
+            "Common interview questions",
         ]
         for i, q in enumerate(questions):
             if cols[i].button(q, use_container_width=True):
@@ -715,23 +749,25 @@ def render_chatbot():
     prompt = user_input or selected_question
 
     if prompt:
-        # Append attachment text to the prompt internally (hidden from UI to keep chat clean?) 
+        # Append attachment text to the prompt internally (hidden from UI to keep chat clean?)
         # Or just send it. Let's send it as part of context.
         # Ideally we want to see "User attached: filename" in chat.
-        
+
         display_prompt = prompt
         full_content = prompt + attachment_text
-        
+
         # If attachment exists, add a note to display
         if attachment_text and chat_file:
-             display_prompt += f" \n\n*📎 Attached: {chat_file.name}*"
+            display_prompt += f" \n\n*📎 Attached: {chat_file.name}*"
 
-        st.session_state.chat_history.append({
-            "role": "user",
-            "content": display_prompt, 
-            "hidden_content": full_content, # Store full content for API processing
-            "timestamp": datetime.now().isoformat()
-        })
+        st.session_state.chat_history.append(
+            {
+                "role": "user",
+                "content": display_prompt,
+                "hidden_content": full_content,  # Store full content for API processing
+                "timestamp": datetime.now().isoformat(),
+            }
+        )
         st.rerun()
 
     # Clear chat button
@@ -745,8 +781,9 @@ def render_chatbot():
 def render_about():
     """Render the About page"""
     st.markdown("## ℹ️ About Resume Matcher & AI Assistant")
-    
-    st.markdown("""
+
+    st.markdown(
+        """
     <div class="glass-card">
         <h3>🚀 What is this?</h3>
         <p>This is a powerful AI-driven platform that helps job seekers:</p>
@@ -756,37 +793,49 @@ def render_about():
             <li><strong>Understand job requirements</strong> better with AI explanations</li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
-    
+    """,
+        unsafe_allow_html=True,
+    )
+
     col1, col2, col3 = st.columns(3)
-    
+
     with col1:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="metric-card">
             <div class="metric-value">SBERT</div>
             <div class="metric-label">Embedding Model</div>
         </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col2:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="metric-card">
             <div class="metric-value">Llama 3.3</div>
             <div class="metric-label">LLM Backend</div>
         </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     with col3:
-        st.markdown("""
+        st.markdown(
+            """
         <div class="metric-card">
             <div class="metric-value">FAISS</div>
             <div class="metric-label">Vector Store</div>
         </div>
-        """, unsafe_allow_html=True)
-    
+        """,
+            unsafe_allow_html=True,
+        )
+
     st.markdown("")
-    
-    st.markdown("""
+
+    st.markdown(
+        """
     <div class="glass-card">
         <h3>🛡️ Safety Features</h3>
         <p>Our platform includes comprehensive guardrails:</p>
@@ -797,14 +846,19 @@ def render_about():
             <li><strong>Hallucination Detection</strong> - Validates AI responses</li>
         </ul>
     </div>
-    """, unsafe_allow_html=True)
-    
-    st.markdown("""
+    """,
+        unsafe_allow_html=True,
+    )
+
+    st.markdown(
+        """
     <div class="glass-card">
         <h3>👥 Team</h3>
         <p>Built with ❤️ as part of an MLOps group project.</p>
     </div>
-    """, unsafe_allow_html=True)
+    """,
+        unsafe_allow_html=True,
+    )
 
 
 # ========================================
@@ -816,30 +870,31 @@ def main():
         page_title="Resume Matcher & AI Assistant",
         page_icon="✨",
         layout="wide",
-        initial_sidebar_state="collapsed" 
+        initial_sidebar_state="collapsed",
     )
-    
+
     # Initialize session state
     if "resume_text" not in st.session_state:
         st.session_state.resume_text = ""
-    
+
     # Inject custom CSS
     inject_custom_css()
-    
+
     # Render header
     render_header()
-    
+
     # Top Level Navigation
     tab1, tab2, tab3 = st.tabs(["📄 Resume Matcher", "💬 AI Chatbot", "ℹ️ About"])
-    
+
     with tab1:
         render_resume_matcher()
-    
+
     with tab2:
         render_chatbot()
-        
+
     with tab3:
         render_about()
+
 
 if __name__ == "__main__":
     main()

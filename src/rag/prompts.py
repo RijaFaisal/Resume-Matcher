@@ -23,7 +23,10 @@ You MUST return a JSON object in this EXACT format (no markdown formatting aroun
 Otherwise, if it's a general question or advice request, just return the plain text answer.
 """
 
-def get_chat_prompt(system_role: str, instruction: str, context: str, user_context: str, query: str) -> str:
+
+def get_chat_prompt(
+    system_role: str, instruction: str, context: str, user_context: str, query: str
+) -> str:
     user_section = f"\nUser Resume/Profile:\n{user_context}\n" if user_context else ""
     return f"""{system_role}
     {instruction}

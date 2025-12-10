@@ -6,7 +6,6 @@ from prometheus_client import REGISTRY, Counter, Gauge, Histogram
 from src.api.main import app, state
 
 
-
 @pytest.fixture(scope="session", autouse=True)
 def setup_app_state():
     class DummyModel:
@@ -27,7 +26,6 @@ def setup_app_state():
             "Job Description": ["Job description"] * 5,
         }
     )
-
 
 
 def get_or_create_metric(name, metric_type, *args, **kwargs):

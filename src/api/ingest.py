@@ -11,11 +11,10 @@ Usage (example):
     python -m src.ingest --data_dir ./data --index_dir ./vectorstore --model all-MiniLM-L6-v2
 """
 
-import os
 import argparse
 import pickle
 from pathlib import Path
-from typing import List, Dict, Tuple
+from typing import List, Dict
 
 import numpy as np
 from sentence_transformers import SentenceTransformer
@@ -24,9 +23,11 @@ import PyPDF2
 
 # ---------- Helpers ----------
 
+
 def read_txt(file_path: Path) -> str:
     with file_path.open("r", encoding="utf-8", errors="ignore") as f:
         return f.read()
+
 
 def read_pdf(file_path: Path) -> str:
     text = []
@@ -40,11 +41,13 @@ def read_pdf(file_path: Path) -> str:
             text.append(page_text)
     return "\n".join(text)
 
+
 def list_files(data_dir: Path, exts=(".txt", ".pdf")) -> List[Path]:
     files = []
     for ext in exts:
         files.extend(sorted(data_dir.rglob(f"*{ext}")))
     return files
+
 
 def chunk_text(text: str, chunk_size: int = 800, overlap: int = 200) -> List[str]:
     """
@@ -63,7 +66,9 @@ def chunk_text(text: str, chunk_size: int = 800, overlap: int = 200) -> List[str
         start = max(end - overlap, end)  # ensure progress
     return [c for c in chunks if c]
 
+
 # ---------- Ingest pipeline ----------
+
 
 class Ingestor:
     def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
@@ -73,7 +78,9 @@ class Ingestor:
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
         # returns a 2D numpy array of shape (n_texts, d)
-        embeddings = self.embedder.encode(texts, show_progress_bar=True, convert_to_numpy=True)
+        embeddings = self.embedder.encode(
+            texts, show_progress_bar=True, convert_to_numpy=True
+        )
         return np.array(embeddings).astype("float32")
 
     def build_faiss_index(self, embeddings: np.ndarray) -> faiss.Index:
@@ -95,7 +102,9 @@ class Ingestor:
             pickle.dump(metas, f)
         print(f"[Ingestor] metadata saved to {meta_path}")
 
-    def ingest(self, data_dir: Path, index_dir: Path, chunk_size: int = 800, overlap: int = 200) -> None:
+    def ingest(
+        self, data_dir: Path, index_dir: Path, chunk_size: int = 800, overlap: int = 200
+    ) -> None:
         files = list_files(data_dir)
         print(f"[Ingestor] found {len(files)} files in {data_dir}")
         all_chunks = []
@@ -111,10 +120,14 @@ class Ingestor:
                 continue
             chunks = chunk_text(text, chunk_size=chunk_size, overlap=overlap)
             for i, c in enumerate(chunks):
-                metas.append({"source": str(file), "chunk_id": i, "text_snippet": c[:200]})
+                metas.append(
+                    {"source": str(file), "chunk_id": i, "text_snippet": c[:200]}
+                )
                 all_chunks.append(c)
         if not all_chunks:
-            raise RuntimeError("No chunks generated. Check your data directory and supported file types.")
+            raise RuntimeError(
+                "No chunks generated. Check your data directory and supported file types."
+            )
 
         print(f"[Ingestor] total chunks: {len(all_chunks)}")
         embeddings = self.embed_texts(all_chunks)
@@ -128,13 +141,30 @@ class Ingestor:
         model_path.write_text(self.model_name)
         print("[Ingestor] ingestion complete.")
 
+
 # ---------- CLI ----------
+
 
 def main():
     p = argparse.ArgumentParser()
-    p.add_argument("--data_dir", type=str, default="./data", help="Directory with .txt and .pdf files")
-    p.add_argument("--index_dir", type=str, default="./vectorstore", help="Directory to save FAISS index and metadata")
-    p.add_argument("--model", type=str, default="all-MiniLM-L6-v2", help="Sentence-Transformers model name")
+    p.add_argument(
+        "--data_dir",
+        type=str,
+        default="./data",
+        help="Directory with .txt and .pdf files",
+    )
+    p.add_argument(
+        "--index_dir",
+        type=str,
+        default="./vectorstore",
+        help="Directory to save FAISS index and metadata",
+    )
+    p.add_argument(
+        "--model",
+        type=str,
+        default="all-MiniLM-L6-v2",
+        help="Sentence-Transformers model name",
+    )
     p.add_argument("--chunk_size", type=int, default=800)
     p.add_argument("--overlap", type=int, default=200)
     args = p.parse_args()
@@ -142,7 +172,13 @@ def main():
     data_dir = Path(args.data_dir)
     index_dir = Path(args.index_dir)
     ing = Ingestor(model_name=args.model)
-    ing.ingest(data_dir=data_dir, index_dir=index_dir, chunk_size=args.chunk_size, overlap=args.overlap)
+    ing.ingest(
+        data_dir=data_dir,
+        index_dir=index_dir,
+        chunk_size=args.chunk_size,
+        overlap=args.overlap,
+    )
+
 
 if __name__ == "__main__":
     main()
