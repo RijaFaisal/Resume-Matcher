@@ -12,7 +12,8 @@ def mock_dependencies():
         
         # Mock SBERT
         mock_sbert = MagicMock()
-        mock_sbert.encode.return_value = [0.1, 0.2, 0.3]
+        import numpy as np
+        mock_sbert.encode.return_value = np.array([0.1, 0.2, 0.3])
         
         # Mock FAISS
         mock_faiss = MagicMock()

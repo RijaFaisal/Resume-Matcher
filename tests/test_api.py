@@ -31,7 +31,8 @@ class TestAPI:
         mock_state.__getitem__.side_effect = lambda k: {
             "sbert_model": mock_sbert,
             "job_embeddings": MagicMock(),
-            "df_job_description": MagicMock()
+            "df_job_description": MagicMock(),
+            "model_info": {"model_name": "test", "version": "1.0"}
         }.get(k)
         
         # We need to mock the dataframe behaviour and util.cos_sim if we go deep,
