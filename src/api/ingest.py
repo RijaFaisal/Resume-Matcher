@@ -73,7 +73,8 @@ class Ingestor:
 
     def embed_texts(self, texts: List[str]) -> np.ndarray:
         # returns a 2D numpy array of shape (n_texts, d)
-        return np.array(self.embedder.encode(texts, show_progress_bar=True, convert_to_numpy=True))
+        embeddings = self.embedder.encode(texts, show_progress_bar=True, convert_to_numpy=True)
+        return np.array(embeddings).astype("float32")
 
     def build_faiss_index(self, embeddings: np.ndarray) -> faiss.Index:
         d = embeddings.shape[1]

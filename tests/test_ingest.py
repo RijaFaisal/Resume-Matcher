@@ -103,7 +103,7 @@ def test_ingest_flow(mock_read, mock_list, mock_ingestor, tmp_path):
          patch.object(ing, 'save_index') as mock_save_idx, \
          patch.object(ing, 'save_metadata') as mock_save_meta:
         
-        mock_embed.return_value = np.array([[0.1, 0.2]])
+        mock_embed.return_value = np.array([[0.1, 0.2]], dtype=np.float32)
         
         ing.ingest(Path("data"), tmp_path)
         
