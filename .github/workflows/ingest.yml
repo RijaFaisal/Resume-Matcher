@@ -1,0 +1,73 @@
+name: Ingest FAISS Index
+
+on:
+  workflow_dispatch:
+    inputs:
+      source:
+        description: 'Source path or s3://bucket/prefix'
+        required: true
+        default: './job_title_des.csv'
+      out_prefix:
+        description: 'S3 destination prefix (e.g. indexes/faiss_v1)'
+        required: true
+        default: 'indexes/faiss_v1'
+
+jobs:
+  ingest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 180
+    env:
+      EMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
+      AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.9'
+
+      - name: Cache pip
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: pip-cache-${{ runner.os }}-${{ hashFiles('**/requirements.txt') }}
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Cache huggingface model (optional)
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cache/huggingface
+            ~/.cache/torch
+          key: hf-cache-${{ runner.os }}-${{ env.EMBED_MODEL }}-${{ github.sha }}
+          restore-keys: |
+            hf-cache-${{ runner.os }}-${{ env.EMBED_MODEL }}-
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Run ingestion (create local FAISS index)
+        run: |
+          mkdir -p /tmp/faiss_index
+          python scripts/ingest_faiss.py \
+            --source "${{ github.event.inputs.source }}" \
+            --out-dir /tmp/faiss_index \
+            --embed-model "${{ env.EMBED_MODEL }}" \
+            --aws-region "${{ env.AWS_REGION }}"
+
+      - name: Upload index files to S3
+        run: |
+          BUCKET=${{ env.S3_BUCKET }}
+          PREFIX=${{ github.event.inputs.out_prefix }}
+          aws s3 cp /tmp/faiss_index/ s3://$BUCKET/${PREFIX}/ --recursive --region "${{ env.AWS_REGION }}"
