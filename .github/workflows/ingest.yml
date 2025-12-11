@@ -21,7 +21,7 @@ jobs:
     env:
       EMBED_MODEL: sentence-transformers/all-MiniLM-L6-v2
       AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
-      S3_BUCKET: ${{ secrets.S3_BUCKET }}
+      S3_BUCKET: resume-matcher-bucket-sahil
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -70,6 +70,6 @@ jobs:
 
       - name: Upload index files to S3
         run: |
-          BUCKET=${{ env.S3_BUCKET }}
+          BUCKET:resume-matcher-bucket-sahil
           PREFIX=${{ github.event.inputs.out_prefix }}
           aws s3 cp /tmp/faiss_index/ s3://$BUCKET/${PREFIX}/ --recursive --region "${{ env.AWS_REGION }}"
