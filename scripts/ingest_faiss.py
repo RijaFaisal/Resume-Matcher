@@ -9,13 +9,16 @@ import numpy as np
 import pandas as pd
 from sentence_transformers import SentenceTransformer
 import faiss
+from pathlib import Path
+import pandas as pd
+from PyPDF2 import PdfReader
 
 def load_docs_from_local(path):
     path = Path(path)
     docs = []
     if path.is_file() and path.suffix.lower() in {".csv", ".tsv"}:
-        df = pd.read_csv(path)
-        # expect a text column named 'text' or 'content' or 'job_description'
+        df = pd.read_csv(path, encoding="utf-8", errors="replace")
+        # prefer known text cols
         for col in ("text","content","job_description","job_title","job"):
             if col in df.columns:
                 texts = df[col].astype(str).tolist()
@@ -23,10 +26,28 @@ def load_docs_from_local(path):
         else:
             texts = df.iloc[:,0].astype(str).tolist()
         docs = [{"id": str(i), "text": t} for i,t in enumerate(texts)]
-    else:
-        # walk txt files
-        for f in path.rglob("*.txt"):
-            docs.append({"id": str(len(docs)), "text": f.read_text(encoding="utf-8")})
+        return docs
+
+    # files: handle .txt and .pdf; skip others
+    for f in path.rglob("*"):
+        if f.is_dir(): 
+            continue
+        if f.suffix.lower() == ".txt":
+            try:
+                txt = f.read_text(encoding="utf-8")
+            except UnicodeDecodeError:
+                txt = f.read_text(encoding="latin-1", errors="ignore")
+            docs.append({"id": str(len(docs)), "text": txt})
+        elif f.suffix.lower() == ".pdf":
+            try:
+                reader = PdfReader(str(f))
+                pages = [p.extract_text() or "" for p in reader.pages]
+                txt = "\n".join(pages)
+                docs.append({"id": str(len(docs)), "text": txt})
+            except Exception as e:
+                print(f"Warning: couldn't read PDF {f}: {e}")
+        else:
+            print(f"Skipping unsupported file type: {f}")
     return docs
 
 def load_docs_from_s3(s3_uri, aws_region=None):
