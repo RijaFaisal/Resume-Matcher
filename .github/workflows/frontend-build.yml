@@ -2,7 +2,7 @@ name: Build & Push Streamlit Frontend
 
 on:
   push:
-    branches: [ main, m2_cloud ]
+    branches: [ m2_cloud ]
   workflow_dispatch:
 
 jobs:

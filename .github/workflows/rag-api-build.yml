@@ -2,7 +2,7 @@ name: Build & Push RAG API
 
 on:
   push:
-    branches: [ m2_cloud ]
+    branches: [ main ]
   workflow_dispatch:
 
 jobs:
