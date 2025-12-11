@@ -32,3 +32,4 @@ jobs:
 
       - name: Output Image URI
         run: echo "IMAGE=311785899227.dkr.ecr.eu-north-1.amazonaws.com/rag-api:${{ github.sha }}"
+#
