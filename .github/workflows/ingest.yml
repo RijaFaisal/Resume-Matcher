@@ -1,6 +1,8 @@
 name: Ingest FAISS Index
 
 on:
+  push:
+    branches: [ m2_cloud ]
   workflow_dispatch:
     inputs:
       source:
