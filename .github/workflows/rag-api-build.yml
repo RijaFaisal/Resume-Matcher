@@ -26,9 +26,9 @@ jobs:
 
       - name: Build & Push RAG API image
         run: |
-          IMAGE="${{ secrets.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
+          IMAGE="${{ env.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
           docker build -t $IMAGE -f Dockerfile.rag .
           docker push $IMAGE
 
       - name: Output Image URI
-        run: echo "IMAGE=${{ secrets.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
+        run: echo "IMAGE=${{ env.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
