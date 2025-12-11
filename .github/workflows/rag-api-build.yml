@@ -1,0 +1,34 @@
+name: Build & Push RAG API
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build-rag-api:
+    runs-on: ubuntu-latest
+    env:
+      AWS_REGION: ${{ secrets.AWS_DEFAULT_REGION }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v2
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_DEFAULT_REGION }}
+
+      - name: Login to ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build & Push RAG API image
+        run: |
+          IMAGE="${{ secrets.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
+          docker build -t $IMAGE -f Dockerfile.rag .
+          docker push $IMAGE
+
+      - name: Output Image URI
+        run: echo "IMAGE=${{ secrets.ECR_REGISTRY }}/rag-api:${{ github.sha }}"
