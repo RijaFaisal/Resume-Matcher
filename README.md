@@ -261,6 +261,49 @@ This application is designed for and deployed on Amazon Web Services (AWS), leve
 
 ---
 
+Cloud Deployment M2:
+
+Setup steps (commands + notes) — include exact commands you ran
+1. Prepare EC2 (Ubuntu)
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io awscli
+sudo systemctl enable --now docker
+sudo usermod -aG docker $USER
+newgrp docker
+
+2. Create HF cache dir
+mkdir -p /home/ubuntu/hf_cache
+chmod 777 /home/ubuntu/hf_cache
+
+3. Login to ECR (region)
+aws ecr get-login-password --region eu-north-1 \
+  | docker login --username AWS --password-stdin 311785899227.dkr.ecr.eu-north-1.amazonaws.com
+
+4. Pull images
+docker pull 311785899227.dkr.ecr.eu-north-1.amazonaws.com/rag-api:<TAG>
+docker pull 311785899227.dkr.ecr.eu-north-1.amazonaws.com/streamlit-frontend:<TAG>
+
+5. Run backend (memory-limited)
+docker run -d --name rag-api --restart unless-stopped --memory 6g \
+  -p 8000:8000 \
+  -e HF_HOME=/home/ubuntu/hf_cache -e TRANSFORMERS_CACHE=/home/ubuntu/hf_cache \
+  311785899227.dkr.ecr.eu-north-1.amazonaws.com/rag-api:<TAG>
+
+6. Create docker network and run frontend on same network
+docker network create mil-net || true
+docker run -d --name streamlit-frontend --restart unless-stopped --network mil-net \
+  -p 8501:8501 \
+  -e BACKEND_URL="http://rag-api:8000" \
+  311785899227.dkr.ecr.eu-north-1.amazonaws.com/streamlit-frontend:<TAG>
+
+
+Alternate (if you prefer public IP in browser): set BACKEND_URL="http://<EC2_PUBLIC_IP>:8000"
+
+7. Quick checks
+docker ps
+docker logs --tail 100 rag-api
+curl -sS http://127.0.0.1:8000/health
+
 ### ⚙️ Makefile Commands
 
 A `Makefile` is included for easy access to common commands. Run `make help` for a full list.
